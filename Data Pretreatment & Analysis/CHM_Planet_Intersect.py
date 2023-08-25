@@ -1,49 +1,9 @@
-################################################################################################################################################################
-## Updated Version for Matching files.
-################################################################################################################################################################
+# The purpose of this file is to perform a matching file operation for CHM and Planet data.
 
 ################################################################################################################################################################
-# Description of the code:
-
-# Import necessary libraries
-# Set up the base folder path
-# Define the paths to the input folders and output folders
-# Create the output folders if they don't exist
-# Define the bounding box for the data of interest
-
-# Load the projection shapefile and extract the bounding box
-# Create lists of optical and LiDAR files
-
-# Iterate over each LiDAR file
-# Extract information from the LiDAR file
-# Create a bounding box for the LiDAR file
-# Check if the LiDAR file intersects with the projection box
-# Create an empty list to store the cropped optical data
-
-# Find the corresponding optical files based on partial matches of extracted codes
-# Iterate over each optical file
-# Extract information from the optical file
-# Adjust the resolution of the optical data to match the LiDAR resolution
-# Reproject the optical data to match the LiDAR CRS
-# Create a bounding box for the optical file
-# Find the intersection of the two bounding boxes
-# Check if there is an intersection
-# Crop the optical data to the intersection area
-# Append the cropped optical data to the list
-
-# Merge the cropped optical data
-# Update the metadata of the merged optical data
-# Construct the output file path for the merged optical data
-# Write the merged optical data to a new file
-
-# Copy the LiDAR file to the output folder
-# Print processing information
-
-# If no intersection found for the LiDAR file, print a message
-
+# Part 1: Import necessary libraries
 ################################################################################################################################################################
 
-# Import necessary libraries
 import os
 import glob
 import re
@@ -72,6 +32,10 @@ import xarray
 import uuid
 import time
 from scipy.ndimage import zoom
+
+################################################################################################################################################################
+# Part 2: Define Functions
+################################################################################################################################################################
 
 # Function to convert UTM zone to EPSG
 def utm_zone_to_epsg(utm_zone):
@@ -124,54 +88,6 @@ def change_crs(input_file, output_file, new_crs):
                     dst_resolution=lidar_resolution,
                 )
 
-
-# # Function that receives a 3D array, a transform, and a CRS to create a rasterio dataset
-# def create_dataset(data, crs, transform):
-#     # Reshape the data array if needed
-#     if data.ndim == 4:
-#         data = data[np.newaxis, :, :]
-
-#     # Receives a 3D array, a transform, and a CRS to create a rasterio dataset
-#     memfile = MemoryFile()
-#     dataset = memfile.open(
-#         driver="GTiff",
-#         height=data.shape[1],
-#         width=data.shape[2],
-#         count=data.shape[0],
-#         crs=crs,
-#         transform=transform,
-#         dtype="float32", #data.dtype,
-#     )
-#     dataset.write(data)
-
-#     return dataset
-
-# # Function that receives a 3D array, a transform, and a CRS to create a rasterio dataset
-# def create_dataset(data, crs, transform, chunk_size=256):
-#     # Reshape the data array if needed
-#     if data.ndim == 4:
-#         data = data[np.newaxis, :, :]
-
-#     # Receives a 3D array, a transform, and a CRS to create a rasterio dataset
-#     memfile = MemoryFile()
-#     dataset = memfile.open(
-#         driver="GTiff",
-#         height=data.shape[1],
-#         width=data.shape[2],
-#         count=data.shape[0],
-#         crs=crs,
-#         transform=transform,
-#         dtype="float32",
-#     )
-
-#     # Write the data in smaller chunks using rasterio.windows
-#     for i in range(0, data.shape[1], chunk_size):
-#         for j in range(0, data.shape[2], chunk_size):
-#             window = rasterio.windows.Window(j, i, min(chunk_size, data.shape[2] - j), min(chunk_size, data.shape[1] - i))
-#             dataset.write(data[:, i:i+window.height, j:j+window.width], window=window)
-
-#     return dataset
-
 def create_dataset(data, crs, transform, chunk_size=128):
     # Reshape the data array if needed
     if data.ndim == 4:
@@ -205,156 +121,9 @@ def create_dataset(data, crs, transform, chunk_size=128):
     return rasterio.open(output_file)
 
 
-# def reproject_optical(optical_file, new_optical_file, lidar_resolution):
-#     """
-#     Reproject the optical data to match the LiDAR resolution.
-
-#     :param optical_file: Path to the original optical file.
-#     :param new_optical_file: Path to save the reprojected optical file.
-#     :param lidar_resolution: The desired resolution to match the LiDAR data.
-#     """
-#     with rasterio.open(optical_file) as src_optical:
-#         # Read the original optical data and its metadata
-#         optical_data = src_optical.read(1)
-#         optical_meta = src_optical.meta
-#         optical_bounds = src_optical.bounds
-#         optical_crs = src_optical.crs
-
-#         # Check if the LiDAR resolution is already 1.0m, if yes, then no need to resample
-#         if src_optical.res[0] != lidar_resolution:
-#             # Calculate the new resolution ratio
-#             resampling_ratio = src_optical.res[0] / lidar_resolution
-
-#             # Update the metadata to match the LiDAR resolution
-#             optical_meta['transform'] = rasterio.Affine(
-#                 optical_meta['transform'][0] / resampling_ratio,
-#                 optical_meta['transform'][1],
-#                 optical_meta['transform'][2],
-#                 optical_meta['transform'][3],
-#                 optical_meta['transform'][4] / resampling_ratio,
-#                 optical_meta['transform'][5]
-#             )
-#             optical_meta['width'] = int(optical_meta['width'] * resampling_ratio)
-#             optical_meta['height'] = int(optical_meta['height'] * resampling_ratio)
-
-#         # Create the reprojected optical file
-#         with rasterio.open(new_optical_file, 'w', **optical_meta) as dst_optical:
-#             # Reproject and resample the data in one step
-#             rasterio.warp.reproject(
-#                 source=rasterio.band(src_optical, 1),
-#                 destination=rasterio.band(dst_optical, 1),
-#                 src_transform=src_optical.transform,
-#                 src_crs=src_optical.crs,
-#                 dst_transform=optical_meta['transform'],
-#                 dst_crs=src_optical.crs,
-#                 resampling=rasterio.enums.Resampling.nearest,
-#             )
-
-
-# def reproject_optical(optical_file, new_optical_file, lidar_resolution):
-#     """
-#     Reproject the optical data to match the LiDAR resolution.
-
-#     :param optical_file: Path to the original optical file.
-#     :param new_optical_file: Path to save the reprojected optical file.
-#     :param lidar_resolution: The desired resolution to match the LiDAR data.
-#     """
-#     with rasterio.open(optical_file) as src_optical:
-#         # Read the original optical data and its metadata
-#         optical_data = src_optical.read(1)
-#         optical_meta = src_optical.meta
-#         optical_bounds = src_optical.bounds
-#         optical_crs = src_optical.crs
-
-#         # Check if the LiDAR resolution is already 1.0m, if yes, then no need to resample
-#         if src_optical.res[0] != lidar_resolution:
-#             # Calculate the new resolution ratio
-#             resampling_ratio = src_optical.res[0] / lidar_resolution
-
-#             # Calculate the new transform and dimensions
-#             new_transform, new_width, new_height = calculate_default_transform(
-#                 src_crs=src_optical.crs,
-#                 dst_crs=src_optical.crs,
-#                 width=int(optical_meta['width'] * resampling_ratio),
-#                 height=int(optical_meta['height'] * resampling_ratio),
-#                 left=optical_bounds.left,
-#                 bottom=optical_bounds.bottom,
-#                 right=optical_bounds.right,
-#                 top=optical_bounds.top
-#             )
-
-#             # Update the metadata to match the LiDAR resolution
-#             optical_meta.update({
-#                 'transform': new_transform,
-#                 'width': new_width,
-#                 'height': new_height
-#             })
-
-#         # Create the reprojected optical file
-#         with rasterio.open(new_optical_file, 'w', **optical_meta) as dst_optical:
-#             # Reproject and resample the data in one step
-#             reproject(
-#                 source=rasterio.band(src_optical, 1),
-#                 destination=rasterio.band(dst_optical, 1),
-#                 src_transform=src_optical.transform,
-#                 src_crs=src_optical.crs,
-#                 dst_transform=optical_meta['transform'],
-#                 dst_crs=src_optical.crs,
-#                 resampling=Resampling.nearest,
-#             )
-
-
-# def reproject_optical(reprojected_data, new_optical_file, lidar_resolution, chunk_size=128):
-#     """
-#     Reproject the optical data to match the LiDAR resolution.
-
-#     :param reprojected_data: Rasterio dataset of the reprojected optical data.
-#     :param new_optical_file: Path to save the reprojected optical file.
-#     :param lidar_resolution: The desired resolution to match the LiDAR data.
-#     :param chunk_size: Size of chunks in which to process the data.
-#     """
-#     # Read the original optical data and its metadata
-#     optical_data = reprojected_data.read(1)
-#     optical_meta = reprojected_data.meta.copy()  # Make a copy of the metadata
-#     optical_bounds = reprojected_data.bounds
-
-#     # Check if the LiDAR resolution is already 1.0m, if yes, then no need to resample
-#     if reprojected_data.res[0] != lidar_resolution:
-#         # Calculate the new resolution ratio
-#         resampling_ratio = reprojected_data.res[0] / lidar_resolution
-
-#         # Calculate the new dimensions for the resampled optical data
-#         new_width = int(optical_meta['width'] / resampling_ratio)
-#         new_height = int(optical_meta['height'] / resampling_ratio)
-
-#         # Ensure the new dimensions are at least 1
-#         new_width = max(1, new_width)
-#         new_height = max(1, new_height)
-
-#         # Resample the optical data in chunks
-#         resampled_optical_data = np.zeros((optical_data.shape[0], new_height, new_width), dtype=optical_data.dtype)
-#         for i in range(0, optical_data.shape[1], chunk_size):
-#             for j in range(0, optical_data.shape[2], chunk_size):
-#                 chunk = optical_data[:, i : i + chunk_size, j : j + chunk_size]
-#                 resampled_chunk = zoom(chunk, zoom=resampling_ratio, order=0)
-#                 resampled_optical_data[:, i : i + resampled_chunk.shape[1], j : j + resampled_chunk.shape[2]] = resampled_chunk
-
-#         # Update the metadata to match the LiDAR resolution
-#         optical_meta.update({
-#             'transform': rasterio.Affine.translation(optical_bounds.left, optical_bounds.top) * rasterio.Affine.scale(lidar_resolution, -lidar_resolution),
-#             'width': new_width,
-#             'height': new_height
-#         })
-
-#         # Create the resampled optical file
-#         with rasterio.open(new_optical_file, 'w', **optical_meta) as dst_optical:
-#             # Write the resampled data to the new file
-#             dst_optical.write(resampled_optical_data, 1)
-#     else:
-#         # No need to resample, just copy the input file to the output file
-#         with rasterio.open(new_optical_file, 'w', **optical_meta) as dst_optical:
-#             dst_optical.write(optical_data, 1)
-
+################################################################################################################################################################
+# Part 3: Apply the functions
+################################################################################################################################################################
 
 # Define the base folder path
 # sourcery skip: use-named-expression
@@ -391,8 +160,6 @@ projection_box = box(
     projection_bounds[2],
     projection_bounds[3],
 )
-
-# print(projection_data.crs)
 
 # Create a list of optical and LiDAR files
 optical_files = glob.glob(os.path.join(optical_folder, "*.tif"))
