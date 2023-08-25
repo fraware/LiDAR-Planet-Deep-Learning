@@ -7,7 +7,7 @@ Welcome to the Kalimantan Forest Height & Biomass Estimation repository! This re
 - [Folder Structure](#folder-structure)
 - [Getting Started](#getting-started)
 - [Acknowledgments](#Acknowledgments)
-- [MIT License](#license)
+- [License](#license)
 
 ## Project Overview
 
@@ -87,13 +87,13 @@ pip install -r requirements.txt
 
 ## Acknowledgments
 
-We extend our sincere appreciation to Dr. Samuel Favrichon for his invaluable guidance, expertise, and unwavering support throughout the course of this research. Dr. Favrichon's contributions in the realms of remote sensing, geospatial analysis, and forest ecology have been instrumental in shaping the direction and methodology of this study.
+We extend our sincere appreciation to *Dr. Samuel Favrichon* for his invaluable guidance, expertise, and unwavering support throughout the course of this research. Dr. Favrichon's contributions in the realms of remote sensing, geospatial analysis, and forest ecology have been instrumental in shaping the direction and methodology of this study.
 
-Our gratitude also extends to Dr. Sassan Saatchi, whose extensive knowledge of LiDAR technology and forest carbon monitoring provided critical insights that significantly enhanced the quality of our research.
+Our gratitude also extends to *Dr. Sassan Saatchi*, whose extensive knowledge of LiDAR technology and forest carbon monitoring provided critical insights that significantly enhanced the quality of our research.
 
-This project would not have been possible without the collaboration and contributions of the Carbon Cycle and Ecosystems Group at NASA Jet Propulsion Laboratory (NASA-JPL). The collective expertise and dedication of this group have played a pivotal role in advancing our understanding of forest height and biomass estimation.
+This project would not have been possible without the collaboration and contributions of the Carbon Cycle and Ecosystems Group at *NASA Jet Propulsion Laboratory* (NASA-JPL). The collective expertise and dedication of this group have played a pivotal role in advancing our understanding of forest height and biomass estimation.
 
-We acknowledge and appreciate the support of the JPL Science community for fostering an environment of innovation and collaboration, which has been instrumental in the success of this endeavor.
+We acknowledge and appreciate the support of the *JPL Science* community for fostering an environment of innovation and collaboration, which has been instrumental in the success of this endeavor.
 
 Lastly, we extend our thanks to the countless individuals and organizations who have contributed to the field of forest ecology and remote sensing, as their work has paved the way for advancements in forest monitoring and climate change mitigation.
 
