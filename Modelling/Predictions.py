@@ -21,7 +21,6 @@ import glob
 import torch
 import pyproj
 from rasterio.warp import calculate_default_transform, reproject, Resampling
-import pyproj
 import itertools
 from rasterio import windows
 import pandas as pd
@@ -36,92 +35,31 @@ import time
 import shutil
 import torch
 import torch.nn as nn
-import torch.functional as F
+import torch.nn.functional as F
 from torchviz import make_dot
 from imagecodecs import imwrite, imread
-import torch.nn as nn
 import torchvision.models as models
-from skimage.metrics import (
-    mean_squared_error,
-    peak_signal_noise_ratio,
-)
+from skimage.metrics import mean_squared_error, peak_signal_noise_ratio
 
-print("PyTorch version:", torch.__version__)  # PyTorch version: 2.0.1+cu118
-import torch.nn.functional as F
+print("PyTorch version:", torch.__version__)
 from fastai.vision.all import *
-from torch.utils.data import DataLoader, TensorDataset
 from torchsummary import summary
 import tifffile
-from skimage.transform import resize
 import dask.array as da
 import imageio
 from skimage import exposure, transform
 from scipy.ndimage import zoom
 import tempfile
 import rioxarray
-import datashader as ds
-import datashader.transfer_functions as tf
-import seaborn as sns
 from rasterio.enums import Resampling
 import tifffile as tiff
 import xarray as xr
 import rioxarray as rxr
 import rasterio as rio
 import torch.optim as optim
-import os
-import rioxarray as rxr
-import rasterio as rio
-from rasterio.windows import Window
-from torch.utils.tensorboard import SummaryWriter
-from skimage.util import view_as_windows
-import os
-import numpy as np
-import rasterio
-from PIL import Image
-import cv2
 from affine import Affine
-import tifffile as tiff
-import imgaug.augmenters as iaa
-import glob
-from rasterio import windows
-import torchvision.transforms as transforms
-from torch.utils.data import DataLoader, TensorDataset
-import datetime
-import time
-import torch
-import torch.nn as nn
-import torch.distributed as dist
-import torch.multiprocessing as mp
-import torchvision.models as models
-import torch.nn.functional as F
-from fastai.vision.all import *
-from torch.utils.data import DataLoader, TensorDataset
-import tifffile
-import dask.array as da
-import imageio
-from scipy.ndimage import zoom
-import tempfile
-import rioxarray
-from rasterio.enums import Resampling
-import tifffile as tiff
-import xarray as xr
-import rioxarray as rxr
-import rasterio as rio
-from skimage.transform import resize
-import os
-import rioxarray as rxr
-import rasterio as rio
-from rasterio.windows import Window
 from tqdm import tqdm
-import rasterio.crs as rcrs
-from rasterio.crs import CRS
-import xarray as xr
-import concurrent.futures
-import xarray as xr
-from rasterio.warp import reproject
 from pyproj import Transformer
-import itertools
-from rasterio import windows
 from osgeo import gdal
 from Modelling import unet_model, calculate_encoder_output_size, resnet_model, encoder_decoder_model
 
