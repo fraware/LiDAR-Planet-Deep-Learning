@@ -4,7 +4,6 @@
 ## Part 1: Basic Analysis
 ################################################################################################################################################################
 
-# Importing the image
 import math
 import rasterio
 import matplotlib.pyplot as plt
@@ -457,85 +456,3 @@ save_raster_with_metadata(output_filename, index_result, src.meta)
 
 # Visualize the index raster
 visualize_raster(index_result, index_title)
-
-
-################################################################################################################################################################
-## Part 3: Computing the ratio of tiles to the Kalimatan shp file
-################################################################################################################################################################
-
-import os
-import geopandas as gpd
-from shapely.geometry import box
-import rasterio
-from rasterio.warp import transform_bounds
-
-# Compare the number of optical tiles in our folder compared to the total tiles in Kalimatan.
-# We indeed find that the ratio is equal to 1, as we have all the tiles for the Kalimantan area.
-
-
-def compute_optical_tiles_ratio(optical_folder, shp_file):
-    """
-    Compute the ratio of optical tiles that intersect with the Kalimantan area.
-
-    Parameters:
-        optical_folder (str): Path to the folder containing the optical tile files (TIFF format).
-        shp_file (str): Path to the shapefile representing the Kalimantan area.
-
-    Returns:
-        float: Ratio of optical tiles that intersect with Kalimantan.
-    """
-    # Create a bounding box for the Kalimantan area
-    kalimantan_bbox = box(108.00, -5.00, 120.00, 8.00)
-
-    # Read the shapefile
-    shapefile = gpd.read_file(shp_file)
-
-    # Filter the shapefile to get only features intersecting with the Kalimantan area
-    kalimantan_shape = shapefile[shapefile.geometry.intersects(kalimantan_bbox)]
-
-    # Get the list of optical files in the folder
-    optical_files = [
-        filename for filename in os.listdir(optical_folder) if filename.endswith(".tif")
-    ]
-
-    # Initialize counters for tiles in Kalimantan and total optical tiles
-    tiles_in_kalimantan = 0
-    total_optical_tiles = len(optical_files)
-
-    for filename in optical_files:
-        filepath = os.path.join(optical_folder, filename)
-        with rasterio.open(filepath) as src:
-            # Get the bounding box of the optical tile and convert it to Kalimantan's CRS
-            optical_crs = src.crs
-            optical_bbox = box(
-                *transform_bounds(optical_crs, kalimantan_shape.crs, *src.bounds)
-            )
-
-            # Check if the optical tile intersects with the Kalimantan area
-            if optical_bbox.intersects(kalimantan_bbox):
-                tiles_in_kalimantan += 1
-
-    # Compute the ratio
-    ratio = tiles_in_kalimantan / total_optical_tiles
-    print(
-        f"Number of our data optical tiles in the Kalimantan area: {tiles_in_kalimantan}"
-    )
-    print(f"Total of optical tiles in the Kalimantan area: {total_optical_tiles}")
-
-    return ratio
-
-
-# Example usage
-optical_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\planet_tiles"
-shp_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\global_grid_planet_projlatlon\global_grid_planet_projlatlon.shp"
-ratio = compute_optical_tiles_ratio(optical_folder, shp_file)
-print("Ratio of optical tiles in the Kalimantan area:", ratio)
-
-# Number of our data optical tiles in the Kalimantan area: 348
-# Total of optical tiles in the Kalimantan area: 348
-# Ratio of optical tiles in the Kalimantan area: 1.0
-
-################################################################################################################################################################
-# Keep in mind that you can create a digital animation of the NDVI through time.
-# For instance, follow: https://docs.digitalearthafrica.org/en/latest/sandbox/notebooks/Real_world_examples/NDVI_animations.html
-################################################################################################################################################################
