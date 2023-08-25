@@ -151,4 +151,3 @@ kalimantan_map.get_root().html.add_child(folium.Element(legend_html))
 # Display the interactive map
 kalimantan_map
 
-####################################################################################################################
