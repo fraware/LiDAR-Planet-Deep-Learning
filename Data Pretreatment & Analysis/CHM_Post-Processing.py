@@ -503,9 +503,9 @@ generate_tree_height_histogram(chm_file)
 # Process LiDAR files
 process_lidar_files(lidar_folder_path, output_folder_path)
 
-
-# Additional Techniques:
-#########################
+################################################################################################################################################################
+# Part 4: Additional Techniques
+################################################################################################################################################################
 
 # Procedure to spot and correct invalid pixels values as outliers
 chunk_size = 256
@@ -516,16 +516,8 @@ get_max_tree_height(chm_corrected_file)
 generate_tree_height_histogram(chm_corrected_file)
 
 # Procedure to remove the outliers from the border region
-# A smaller percentage value will result in a narrower border region.
-# A larger percentage value will result in a wider border region.
-# A smaller min_pixels value will ensure the border is not too narrow.
-# A larger min_pixels value will set a minimum width for the border region.
 threshold = 115  # Threshold value for outlier detection (e.g., 115 is the height of the tallest tree in the world)
 remove_border_outliers(chm_corrected_file, threshold, output_folder_path, percentage=1, min_pixels=100)
-
-# check of the operation
-get_max_tree_height(chm_cleaned_file)
-generate_tree_height_histogram(chm_cleaned_file)
 
 # Get the extent of the CHM data
 with rasterio.open(chm_file) as src:
