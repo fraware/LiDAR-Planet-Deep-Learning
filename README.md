@@ -1,3 +1,3 @@
-# Kalimantan Forest Height Estimation using Deep Learning
+# Kalimantan Forest Height & Biomass Estimation Using Deep Learning
 Deep Learning Repo for Biomass Estimation from Airborne and Spaceborne images. 
 
