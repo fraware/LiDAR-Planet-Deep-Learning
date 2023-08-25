@@ -6,9 +6,7 @@ Welcome to the Kalimantan Forest Height & Biomass Estimation repository! This re
 - [Project Overview](#project-overview)
 - [Folder Structure](#folder-structure)
 - [Getting Started](#getting-started)
-- [Data Pretreatment & Analysis](#data-pretreatment--analysis)
-- [Modelling](#modelling)
-- [Contributing](#contributing)
+- [Acknowledgments](#Acknowledgments)
 - [MIT License](#license)
 
 ## Project Overview
@@ -57,21 +55,49 @@ The Modelling folder is dedicated to deep learning model development. It include
 
 ## Getting Started
 
-[Provide instructions on how to get started with your project. This may include installation steps, dependencies, or any other essential information.]
+### Prerequisites
 
-## Data Pretreatment & Analysis
+Make sure you have the following prerequisites installed on your system:
 
-[Provide details about the data preprocessing and analysis steps. Explain the significance of these steps and how they contribute to the project's objectives.]
+- [Python](https://www.python.org/) (version `3.11.4`)
+- [PyTorch](https://pytorch.org/) (version `11.7`)
+- [Rasterio](https://rasterio.readthedocs.io/en/latest/)
+- [GDAL](https://gdal.org/)
 
-## Modelling
+### Setup a virtual environment 
+See details in the [venv documentation](https://docs.python.org/3/library/venv.html).
+ 
+**Example on linux:**
+ 
+Create a new virtual environment called `Kalimantan_Project_env`.
+```
+python3 -m venv /path/to/new/virtual/environment/Kalimantan_Project_env
+```
 
-[Explain the modeling approach and the deep learning techniques used in your project. Highlight any specific models or algorithms.]
+Activate the new environment:
+```
+source /path/to/new/virtual/environment/Kalimantan_Project_env/bin/activate
+```
 
-## Contributing
+### Install python packages
+After activating the venv, install the python packages with:
+```
+pip install -r requirements.txt
+```
 
-[Explain how others can contribute to your project. This may include information on submitting issues, pull requests, or guidelines for contributing code.]
+## Acknowledgments
+
+We extend our sincere appreciation to Dr. Samuel Favrichon for his invaluable guidance, expertise, and unwavering support throughout the course of this research. Dr. Favrichon's contributions in the realms of remote sensing, geospatial analysis, and forest ecology have been instrumental in shaping the direction and methodology of this study.
+
+Our gratitude also extends to Dr. Sassan Saatchi, whose extensive knowledge of LiDAR technology and forest carbon monitoring provided critical insights that significantly enhanced the quality of our research.
+
+This project would not have been possible without the collaboration and contributions of the Carbon Cycle and Ecosystems Group at NASA Jet Propulsion Laboratory (NASA-JPL). The collective expertise and dedication of this group have played a pivotal role in advancing our understanding of forest height and biomass estimation.
+
+We acknowledge and appreciate the support of the JPL Science community for fostering an environment of innovation and collaboration, which has been instrumental in the success of this endeavor.
+
+Lastly, we extend our thanks to the countless individuals and organizations who have contributed to the field of forest ecology and remote sensing, as their work has paved the way for advancements in forest monitoring and climate change mitigation.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See LICENSE for more details. 
 
