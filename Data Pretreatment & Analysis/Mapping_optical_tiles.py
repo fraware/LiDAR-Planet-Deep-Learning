@@ -1,4 +1,4 @@
-# The purpose of this file is to visualize the spatial distribution of Planet data sampling. 
+# The purpose of this file is to visualize the spatial distribution of Planet data. 
 
 #################################################################################################################################
 # Data Visualization Mapping for Optical tiles
