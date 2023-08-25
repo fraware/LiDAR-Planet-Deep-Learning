@@ -1,10 +1,9 @@
+# The purpose of this file is to create and apply cloud masks to Planet images. 
+
 #####################################################################################################################
-# Creating the cloud masks
+# Part 1: Importing necessary libraries
 #####################################################################################################################
 
-# !!! 5 files are missing as I have only manage to use my CPU and allocation of 6266290176 exceeds 10% of free system memory.
-
-# Importing necessary libraries
 import os
 import glob
 import numpy as np
@@ -32,9 +31,8 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
 #####################################################################################################################
-
-# Defining the functions
-
+# Part 2: Defining the functions
+#####################################################################################################################
 
 def EncoderMiniBlock(
     inputs, n_filters=32, dropout_prob=0.25, max_pooling=True, kernel_size=(3, 3)
@@ -269,6 +267,8 @@ def apply_cloud_mask(img_array, cloud_mask):
 
 
 #####################################################################################################################
+# Part 3: Applying the functions
+#####################################################################################################################
 
 # Using GPU operations
 
@@ -292,10 +292,6 @@ if gpus:
 physical_devices = tf.config.experimental.list_physical_devices("GPU")
 if len(physical_devices) > 0:
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
-
-#####################################################################################################################
-
-# Applying the functions
 
 # Load the TIFF image
 data_folder = (
@@ -363,6 +359,8 @@ for planet_img_file in planet_img_files:
             dst.write(masked_img)
 
 #####################################################################################################################
+# Part 4: Visualizing the results
+#####################################################################################################################
 
 # Visualize predictions and results
 
@@ -420,8 +418,6 @@ plt.xlabel("Predicted Labels")
 plt.ylabel("True Labels")
 plt.title("Confusion Matrix")
 plt.show()
-
-#####################################################################################################################
 
 # List all files in the results folder
 masked_img_files = [
