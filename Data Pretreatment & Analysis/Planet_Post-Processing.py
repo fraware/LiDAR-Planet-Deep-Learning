@@ -1,10 +1,9 @@
-# The objective of this file is to create filters and re-project the Planet files.
+# The purpose of this file is to create and apply cloud masks to Planet images.
 
 #####################################################################################################################
-# Creating the cloud masks
+# Part 1: Importing necessary libraries
 #####################################################################################################################
 
-# Importing necessary libraries
 import math
 import rasterio
 import matplotlib.pyplot as plt
@@ -27,8 +26,8 @@ import rasterio as rio
 import random
 
 #####################################################################################################################
-
-# Defining the functions
+# Part 2: Defining the functions
+#####################################################################################################################
 
 def get_projection_data(ref_img):
     """
@@ -82,13 +81,13 @@ def find_threshold_value(img_file):
         band = img_ds.GetRasterBand(band_index).ReadAsArray()
         all_band_values.extend(band.ravel())
 
-    # # Plot histogram of all bands pixel values
-    # plt.figure(figsize=(8, 6))
-    # plt.hist(all_band_values, bins=50, range=[0, 255], color='gray', alpha=0.5)
-    # plt.title('All Bands Pixel Value Distribution')
-    # plt.xlabel('Pixel Value')
-    # plt.ylabel('Frequency')
-    # plt.show()
+    # Plot histogram of all bands pixel values
+    plt.figure(figsize=(8, 6))
+    plt.hist(all_band_values, bins=50, range=[0, 255], color='gray', alpha=0.5)
+    plt.title('All Bands Pixel Value Distribution')
+    plt.xlabel('Pixel Value')
+    plt.ylabel('Frequency')
+    plt.show()
 
     # Calculate threshold value based on the distribution (e.g., using mean and standard deviation)
     threshold_value = np.mean(all_band_values) + 2 * np.std(all_band_values)
@@ -239,8 +238,8 @@ def create_cloud_masks(img_file, threshold_value, results_folder):
         save_mask_as_raster_PIL(cloud_shadow_mask_band, results_folder, f"_cloud_shadow_mask{band_name}", img_file)
 
 #####################################################################################################################
-
-# Applying the operations to create the masks
+Part 3: Applying the operations to create the masks
+#####################################################################################################################
 
 # Load the TIFF image
 data_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles"
@@ -257,82 +256,9 @@ for img_file in img_files:
     create_cloud_masks(img_file, threshold_value, results_folder)
 
 #####################################################################################################################
-# Applying the masks to the Planet files
+# Part 4: Applying the masks to the Planet files
 #####################################################################################################################
 
-# Importing necessary libraries
-import math
-import rasterio
-import matplotlib.pyplot as plt
-import numpy as np
-import cv2
-import os
-import time
-import argparse
-from osgeo import gdal
-from scipy import ndimage
-from PIL import Image, ImageOps
-import glob
-
-# # Function to apply mask on the green band of the Planet image and save as 4-channel TIFF (this one was working great!)
-# def apply_mask_and_save_as_4_channel_tiff(planet_img_path, cloud_mask_paths, cloud_shadow_mask_paths, masked_value):
-#     with rasterio.open(planet_img_path) as planet_ds:
-#         # Read all bands from the Planet image
-#         num_bands = planet_ds.count
-#         band_data = [planet_ds.read(band_index) for band_index in range(1, num_bands + 1)]
-
-#         # Count the number of bands that exceed the threshold
-#         num_bands_exceed_threshold = 0
-#         for band_index, (cloud_mask_path, cloud_shadow_mask_path) in enumerate(zip(cloud_mask_paths, cloud_shadow_mask_paths)):
-#             # Read the cloud mask data
-#             with Image.open(cloud_mask_path) as cloud_mask_image:
-#                 cloud_mask_data = np.array(cloud_mask_image)  # Convert PIL image to numpy array
-#             # Read the cloud shadow mask data
-#             with Image.open(cloud_shadow_mask_path) as cloud_shadow_mask_image:
-#                 cloud_shadow_mask_data = np.array(cloud_shadow_mask_image)  # Convert PIL image to numpy array
-
-#             # Create a mask where both cloud and cloud shadow areas are masked
-#             combined_mask = np.logical_or(cloud_mask_data == 1, cloud_shadow_mask_data == 0)
-
-#             # Check if the threshold is exceeded for the current band
-#             if np.all(combined_mask):
-#                 num_bands_exceed_threshold += 1
-
-#         # If the threshold is exceeded for at least 2 bands, apply the mask to all bands
-#         if num_bands_exceed_threshold >= 2:
-#             masked_band_data = []
-#             for band_index, (cloud_mask_path, cloud_shadow_mask_path) in enumerate(zip(cloud_mask_paths, cloud_shadow_mask_paths)):
-#                 # Read the cloud mask data
-#                 with Image.open(cloud_mask_path) as cloud_mask_image:
-#                     cloud_mask_data = np.array(cloud_mask_image)  # Convert PIL image to numpy array
-#                 # Read the cloud shadow mask data
-#                 with Image.open(cloud_shadow_mask_path) as cloud_shadow_mask_image:
-#                     cloud_shadow_mask_data = np.array(cloud_shadow_mask_image)  # Convert PIL image to numpy array
-
-#                 # Create a mask where both cloud and cloud shadow areas are masked
-#                 combined_mask = np.logical_or(cloud_mask_data == 1, cloud_shadow_mask_data == 0)
-
-#                 # Apply the mask on the current band
-#                 masked_band = np.copy(band_data[band_index])
-#                 masked_band[combined_mask] = masked_value
-#                 masked_band_data.append(masked_band)
-
-#         else:
-#             # If the threshold is not exceeded for at least 2 bands, retain the original band data
-#             masked_band_data = band_data
-
-#         # Save the modified image as a 4-channel TIFF
-#         modified_img_path = os.path.join(processed_masks_folder, f"{os.path.splitext(os.path.basename(planet_img_path))[0]}_modified.tif")
-#         with rasterio.open(planet_img_path) as planet_ds:
-#             profile = planet_ds.profile  # Get metadata from the original image
-#             profile.update(count=num_bands)  # Set the number of bands to the total number of bands
-#             with rasterio.open(modified_img_path, 'w', **profile) as modified_ds:
-#                 for band_index, band in enumerate(masked_band_data, start=1):
-#                     modified_ds.write(band, band_index)
-
-
-# Function will now check if the threshold is exceeded for both band 1 and band 3 before applying the mask to all bands.
-# If the condition is met, the mask will be applied to all bands; otherwise, the original band data will be retained.
 def apply_mask_and_save_as_4_channel_tiff(planet_img_path, cloud_mask_path, cloud_shadow_mask_path, masked_value):
     """
     Apply masks from cloud and cloud shadow images to the corresponding bands of the Planet image and save as a 4-channel TIFF.
@@ -382,8 +308,8 @@ def apply_mask_and_save_as_4_channel_tiff(planet_img_path, cloud_mask_path, clou
                     modified_ds.write(band, band_index)
 
 #####################################################################################################################
-
-# Applying the function
+# Part 5: Applying the function
+#####################################################################################################################
 
 # Path to the directory containing Planet images and processed masks
 planet_data_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles"
@@ -415,305 +341,3 @@ for planet_img_file in planet_img_files:
         if os.path.exists(mask_file):
             os.remove(mask_file)
             print(f"Deleted: {mask_file}")
-
-
-# #####################################################################################################################
-# # Checking Aligmnent
-# #####################################################################################################################
-
-# import imageio
-
-# def plot_random_input_target(planet_folder, lidar_folder):
-#     """
-#     Load and plot a random input patch (Optical) and its corresponding target patch (LiDAR).
-
-#     Parameters:
-#         planet_folder (str): Path to the folder containing Planet files.
-#         lidar_folder (str): Path to the folder containing LiDAR (CHM) files.
-
-#     Returns:
-#         None
-#     """
-#     input_tif_files = os.listdir(planet_folder)
-#     target_tif_files = os.listdir(lidar_folder)
-
-#     # Select a random input tif file
-#     random_input_file = random.choice(input_tif_files)
-
-#     # Extract common parts from input filename
-#     common_parts = "_".join(random_input_file.split("_")[1:4])
-
-#     # Find corresponding target tif file
-#     matching_target_files = [
-#         file for file in target_tif_files
-#         if common_parts in file
-#     ]
-
-#     if not matching_target_files:
-#         print(f"No matching target file found for input file: {random_input_file}")
-
-#     # Select a random corresponding target tif file
-#     random_target_file = random.choice(matching_target_files)
-
-#     # Plot the input and target patches side by side
-#     plt.figure(figsize=(10, 5))
-
-#     # Plot the target patch
-#     input_path = os.path.join(planet_folder, random_input_file)
-#     input_data = imageio.imread(input_path)
-#     input_first_band = input_data[:, :, 0]
-#     # Plot the input patch (first band)
-#     plt.subplot(1, 2, 1)
-#     plt.imshow(input_first_band, cmap='gray')  # Use a grayscale colormap
-#     plt.title("Input Patch (Optical - First Band)")
-#     plt.axis("off")
-
-#     # Plot the target patch
-#     plt.subplot(1, 2, 2)
-#     target_path = os.path.join(lidar_folder, random_target_file)
-#     target_data = plt.imread(target_path)
-#     plt.imshow(target_data, cmap="viridis")  # You can choose a different colormap
-#     plt.title("Target Patch (LiDAR)")
-#     plt.axis("off")
-
-#     plt.tight_layout()
-#     plt.show()
-
-# # Example usage
-# planet_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"
-# lidar_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"
-# plot_random_input_target(planet_folder, lidar_folder)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#----------------------------------------------------------------
-
-# Using Fabien's Pre-trained U-net model
-
-# # Add the model loading and inference code here
-# # Use 'with' context managers for both rasterio.open blocks
-# with rasterio.open(predicted_path) as src, rasterio.open(reference_path) as reference:
-#     # Create the profile for the output raster
-#     profile = src.profile
-#     profile["BIGTIFF"] = "YES"
-#     profile["compress"] = "LZW"
-#     profile["count"] = 1
-#     profile["tiled"] = True
-#     profile["blockysize"] = 128
-#     profile["blockxsize"] = 128
-#     profile["nodata"] = np.nan
-
-#     # Load your pre-trained model using Keras or PyTorch
-#     # Replace 'PATH_TO_MODEL' with the actual path to the model file
-#     model = keras.models.load_model(PATH_TO_MODEL, compile=False)
-
-#     # Process each image in img_files
-#     img_files = [img_file for img_file in glob.glob(os.path.join(data_folder, "*.tif"))]
-#     for img_file in img_files:
-#         threshold_value = find_threshold_value(img_file)
-#         create_cloud_masks(img_file, threshold_value, results_folder)
-
-#         # Load the subtile data using the 'load_subtile' function
-#         granule = "some_granule_name"  # Replace this with the appropriate granule name
-#         to_predict, original_size = load_subtile(granule)
-
-#         if to_predict is not None:
-#             # Apply the machine learning model to mask clouds
-#             prediction = model.predict(to_predict)
-
-
-# #####################################################################################################################
-# # Re-projecting the Planet files at 1m resolution.
-# #####################################################################################################################
-
-# # importing the libraries
-# import os
-# import numpy as np
-# import rasterio
-# from PIL import Image
-# import cv2
-# import tifffile as tiff
-# import imgaug.augmenters as iaa
-# import glob
-# import torchvision.transforms as transforms
-# from torch.utils.data import DataLoader, TensorDataset
-# import datetime
-# import time
-# import torch
-# import torch.nn as nn
-# import torchvision.models as models
-# import torch.nn.functional as F
-# from fastai.vision.all import *
-# from torch.utils.data import DataLoader, TensorDataset
-# import tifffile
-# import dask.array as da
-# import imageio
-# from scipy.ndimage import zoom
-# import tempfile
-# import rioxarray
-# from rasterio.enums import Resampling
-# import tifffile as tiff
-# import xarray as xr
-# import rioxarray as rxr
-# import rasterio as rio
-# from skimage.transform import resize
-# import os
-# import rioxarray as rxr
-# import rasterio as rio
-# from rasterio.windows import Window
-
-# # Defining the function
-
-# def process_files_in_folder(planet_folder_path, lidar_folder_path, output_folder_path):
-
-#     # Load all chm files from LiDAR folder and sort them
-#     chm_data_files = [f for f in os.listdir(lidar_folder_path) if f.endswith(".tif")]
-#     chm_data_files.sort()
-
-#     # Sort planet files
-#     planet_files = [f for f in os.listdir(planet_folder_path) if f.endswith("_modified.tif")]
-#     planet_files.sort()
-
-#     for planet_file, chm_file in zip(planet_files, chm_data_files):
-#         planet_file_path = os.path.join(planet_folder_path, planet_file)
-
-#         # Load planet_data using xr.open_dataset
-#         planet_data = xr.open_dataset(planet_file_path)
-
-#         # Find the corresponding chm file
-#         chm_file_path = os.path.join(lidar_folder_path, chm_file)
-
-#         # Load chm_data using xr.open_dataset
-#         chm_data = xr.open_dataset(chm_file_path)
-
-#         # Reproject planet_data to match the projection of chm_data using rasterio
-#         reprojected_planet = planet_data.rio.reproject_match(chm_data)
-
-#         # # Print the original and reprojected resolutions
-#         # print(f"Original Resolution: {planet_data.rio.resolution()} m")
-#         # print(f"Reprojected Resolution: {reprojected_planet.rio.resolution()} m")
-
-#         # # Print the shape of the data array after reprojection
-#         # print(f"Reprojected Data Shape: {reprojected_planet.band_data.shape}")
-
-#         # Data Type Conversion
-#         try:
-#             # Try to save data as int16
-#             reprojected_planet.band_data.astype(np.int16).rio.to_raster(f"{output_folder_path}/{os.path.splitext(planet_file)[0]}_reproject.tif")
-#             print(f"Data type conversion to np.int16 and saving successful for {planet_file}.")
-#         except OverflowError:
-#             try:
-#                 # If int16 fails, try to save data as float32
-#                 reprojected_planet.band_data.astype(np.float32).rio.to_raster(f"{output_folder_path}/{os.path.splitext(planet_file)[0]}_reproject.tif")
-#                 print(f"Data type conversion to np.float32 and saving successful for {planet_file}.")
-#             except OverflowError:
-#                 print(f"Data type conversion to np.int16 and np.float32 failed for {planet_file}.")
-
-#     # Delete files that end with "_modified.tif" in the output folder
-#     for file in os.listdir(output_folder_path):
-#         if file.endswith("_modified.tif"):
-#             file_path = os.path.join(output_folder_path, file)
-#             os.remove(file_path)
-#             print(f"Deleted {file}.")
-
-# #####################################################################################################################
-
-# # Applying the function
-
-# planet_folder_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"
-# lidar_folder_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"
-# output_folder_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"
-
-# process_files_in_folder(planet_folder_path, lidar_folder_path, output_folder_path)
-
-#####################################################################################################################
-
-#----- OLD -----
-
-
-# def process_files_in_folder(planet_folder_path, lidar_folder_path, output_folder_path):
-
-#     # Load all chm files from LiDAR folder and sort them
-#     chm_data_files = [f for f in os.listdir(lidar_folder_path) if f.endswith(".tif")]
-#     chm_data_files.sort()
-
-#     # Sort planet files
-#     planet_files = [f for f in os.listdir(planet_folder_path) if f.endswith("_modified.tif")]
-#     planet_files.sort()
-
-#     for planet_file, chm_file in zip(planet_files, chm_data_files):
-#         planet_file_path = os.path.join(planet_folder_path, planet_file)
-
-#         # Load planet_data using xr.open_dataset
-#         planet_data = xr.open_dataset(planet_file_path)
-
-#         # Find the corresponding chm file
-#         chm_file_path = os.path.join(lidar_folder_path, chm_file)
-
-#         # Load chm_data using xr.open_dataset
-#         chm_data = xr.open_dataset(chm_file_path)
-
-#         # Reproject planet_data to match the projection of chm_data using rasterio
-#         reprojected_planet = planet_data.rio.reproject_match(chm_data)
-
-#         # # Print the original and reprojected resolutions
-#         # print(f"Original Resolution: {planet_data.rio.resolution()} m")
-#         # print(f"Reprojected Resolution: {reprojected_planet.rio.resolution()} m")
-
-#         # # Print the shape of the data array after reprojection
-#         # print(f"Reprojected Data Shape: {reprojected_planet.band_data.shape}")
-
-#         # Data Type Conversion
-#         try:
-#             # Try to save data as int16
-#             reprojected_planet.band_data.astype(np.int16).rio.to_raster(f"{output_folder_path}/{planet_file}_reproject.tif")
-#             print(f"Data type conversion to np.int16 and saving successful for {planet_file}.")
-#         except OverflowError:
-#             try:
-#                 # If int16 fails, try to save data as float32
-#                 reprojected_planet.band_data.astype(np.float32).rio.to_raster(f"{output_folder_path}/{planet_file}_reproject.tif")
-#                 print(f"Data type conversion to np.float32 and saving successful for {planet_file}.")
-#             except OverflowError:
-#                 print(f"Data type conversion to np.int16 and np.float32 failed for {planet_file}.")
-
-#         # Get the planet_values_array as NumPy array
-#         planet_values_array = reprojected_planet.band_data.values
-
-#         # # Reshape the planet_values_array to the desired shape
-#         # planet_values_array = planet_values_array.reshape((4, 128, 128, -1))
-
-#         # # Rescale the data down to the desired shape using bilinear interpolation
-#         # desired_shape = (4, 128, 128, -1)
-#         # planet_values_array = resize(planet_values_array, desired_shape, mode='reflect', anti_aliasing=True)
-
-#         # # Convert NumPy array to PyTorch tensor
-#         # planet_values_tensor = torch.from_numpy(planet_values_array)
-#         # # Save the planet_values_tensor to a file using torch
-#         # output_tensor_file_path = os.path.join(output_folder_path, f"{planet_file}_reprojected.pt")
-#         # torch.save(planet_values_tensor, output_tensor_file_path)
-
-#         # Convert and save NumPy array to npy format
-#         output_npy_file_path = os.path.join(output_folder_path, f"{os.path.splitext(planet_file)[0]}_reprojected.npy")
-#         np.save(output_npy_file_path, planet_values_array)
-#         print(f"Data saved as npy format for {planet_file}.")
-
-#     # # Delete files that end with "_reproject.tif" in the output folder
-#     # for file in os.listdir(output_folder_path):
-#     #     if file.endswith("_reproject.tif"):
-#     #         file_path = os.path.join(output_folder_path, file)
-#     #         os.remove(file_path)
-#     #         print(f"Deleted {file}.")
-
