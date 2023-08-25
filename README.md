@@ -35,15 +35,15 @@ The repository is structured into two main folders:
 
 This folder contains scripts and resources related to the preprocessing, treatment, and analysis of both LiDAR and Planet data. It includes:
 
-- **CHM_Analysis**: .
-- **CHM_Planet_Intersect**: .
-- **CHM_Post-Processing**: .
-- **mapping_CHM_files**: .
+- **CHM_Analysis**: Analysis of the CHM files.
+- **CHM_Planet_Intersect**: Perform a matching file operation for CHM and Planet data.
+- **CHM_Post-Processing**: Treat the CHM files.
+- **Mapping_CHM_files**: Visualize the spatial distribution, height, and gradient of LiDAR data.
 
-- **Planet_Analysis**: .
-- **Planet_Post-Processing**: .
-- **Planet_Post-Processing-U-Net**: .
-- **mapping_optical_tiles**: .
+- **Planet_Analysis**: Analysis of the Planet files.
+- **Planet_Post-Processing**: Create and apply cloud masks to Planet images through statistical methods. 
+- **Planet_Post-Processing-U-Net**: Create and apply cloud masks to Planet images through U-Net modelling. 
+- **Mapping_optical_tiles**: Visualize the spatial distribution of Planet data.
 
 ### Modelling
 
@@ -54,7 +54,6 @@ The Modelling folder is dedicated to deep learning model development. It include
 - **Predictions**: Perform model predictions at different levels.
 - **Mapping_visualisation_NDVI_stratified_sampling**: Visualize the distribution of validation/training/test samples for NDVI stratified sampling.
 - **Mapping_visualisation_random_sampling**: Visualize the distribution of validation/training/test samples for random sampling.
-
 
 ## Getting Started
 
@@ -74,5 +73,5 @@ The Modelling folder is dedicated to deep learning model development. It include
 
 ## License
 
-[Specify the license for your project, e.g., MIT License or another open-source license.]
+This project is licensed under the MIT License.
 
