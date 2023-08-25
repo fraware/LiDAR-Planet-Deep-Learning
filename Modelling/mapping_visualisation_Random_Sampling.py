@@ -1,5 +1,7 @@
+# The purpose of this file is to visualize the distribution of validation/training/test samples.
+
 #################################################################################################################################
-# Visualization of the distribution of validation/training/test sample for Random Sampling
+# Part 1: Import necessary libraries
 #################################################################################################################################
 
 from osgeo import gdal
@@ -14,9 +16,13 @@ from sklearn.model_selection import train_test_split
 import contextily as ctx
 import folium
 
+#################################################################################################################################
+# Part 2: Create Mapping Visualization
+#################################################################################################################################
+
 # Define the paths to the input and target data folders
-input_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"  # Optical
-target_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"  # LiDAR
+input_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"  
+target_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"  
 shapefile_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\global_grid_planet_projlatlon\global_grid_planet_projlatlon.shp"
 
 # List the input and target files
@@ -89,9 +95,9 @@ ax.legend(handles=scatter_points)
 # Show the map
 plt.show()
 
-####################################################################################################################
-
-# Create an interactive map using folium
+#################################################################################################################################
+# Part 3: Create an interactive map using folium
+#################################################################################################################################
 
 # Create the folium map centered on Kalimantan
 kalimantan_map = folium.Map(location=[-1.7, 113.4], zoom_start=7)
