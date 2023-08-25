@@ -1,3 +1,5 @@
+# The purpose of this file is to visualize the spatial distribution of Planet data sampling. 
+
 #################################################################################################################################
 # Data Visualization Mapping for Optical tiles
 #################################################################################################################################
@@ -18,7 +20,7 @@ from osgeo import gdal
 from matplotlib.colors import ListedColormap
 
 # Define the paths to the optical data folder
-optical_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"  # Optical
+optical_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet" 
 shapefile_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\global_grid_planet_projlatlon\global_grid_planet_projlatlon.shp"
 
 # List the optical files
