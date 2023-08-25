@@ -1,5 +1,7 @@
+# The purpose of this file is to visualize the spatial distribution, height, and gradient of LiDAR data. 
+
 #################################################################################################################################
-# Data Visualization Mapping for LiDAR files
+# Part 1: Data Visualization Mapping for LiDAR files
 #################################################################################################################################
 
 import os
@@ -74,7 +76,7 @@ plt.title("LiDAR Mapping")
 plt.show()
 
 #################################################################################################################################
-# Height and Gradient Visualization Mapping
+# Part 2: Height and Gradient Visualization Mapping
 #################################################################################################################################
 
 import os
@@ -175,5 +177,3 @@ ax_gradient.set_aspect('equal')
 
 # Show the maps
 plt.show()
-
-#################################################################################################################################
