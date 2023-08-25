@@ -1,5 +1,7 @@
+# The purpose of this file is to perform model prediction at different levels.
+
 #################################################################################################################################
-# Individual Model Prediction
+# Part 1: Importing necessary libraries
 #################################################################################################################################
 
 import os
@@ -8,6 +10,8 @@ import rasterio
 from PIL import Image
 from sklearn.model_selection import train_test_split
 import cv2
+import datashader as ds
+import datashader.transfer_functions as tf
 import skimage.util as sk_util
 import plotly.express as px
 from skimage.transform import resize
@@ -119,6 +123,23 @@ from pyproj import Transformer
 import itertools
 from rasterio import windows
 from osgeo import gdal
+from Modelling import unet_model, calculate_encoder_output_size, resnet_model, encoder_decoder_model
+
+#################################################################################################################################
+# Part 2: Defining paths and parameters
+#################################################################################################################################
+
+# Define the paths to the input and target data folders
+input_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"  # Optical
+target_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"  # LiDAR
+
+# Load the data
+smoothed_train_input = smoothed_train_input.to(device)
+normalized_val_input = normalized_val_input.to(device)
+normalized_val_target = normalized_val_target.to(device)
+normalized_test_input = normalized_test_input.to(device)
+normalized_test_target = normalized_test_target.to(device)
+train_target_patches = train_target_patches.to(device)
 
 # Check if CUDA is available
 if torch.cuda.is_available():
@@ -137,305 +158,17 @@ if num_gpus > 0:
 else:
     print("No GPUs available.")
 
-# Defining paths and parameters
-
-# Define the paths to the input and target data folders
-input_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"  # Optical
-target_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"  # LiDAR
-
-# Load the preprocessed data
-smoothed_train_input_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\smoothed_train_input.pth"
-smoothed_train_input = torch.load(smoothed_train_input_path)
-
-# Load the normalized validation and test data
-normalized_val_input_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\normalized_val_input.pth"
-normalized_val_target_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\normalized_val_target.pth"
-normalized_test_input_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\normalized_test_input.pth"
-normalized_test_target_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\normalized_test_target.pth"
-train_target_patches_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\train_target_patches.pth"
-normalized_val_input = torch.load(normalized_val_input_path)
-normalized_val_target = torch.load(normalized_val_target_path)
-normalized_test_input = torch.load(normalized_test_input_path)
-normalized_test_target = torch.load(normalized_test_target_path)
-train_target_patches = torch.load(normalized_test_target_path)
-
-# Move data to the appropriate device
-smoothed_train_input = smoothed_train_input.to(device)
-normalized_val_input = normalized_val_input.to(device)
-normalized_val_target = normalized_val_target.to(device)
-normalized_test_input = normalized_test_input.to(device)
-normalized_test_target = normalized_test_target.to(device)
-train_target_patches = train_target_patches.to(device)
-
-
-# Defining the different model architectures
-
-
-def unet_model(n_channels, n_classes):
-    """
-    Create a U-Net model for semantic segmentation.
-
-    Args:
-        n_channels (int): Number of input channels (e.g., 3 for RGB images).
-        n_classes (int): Number of output classes (e.g., number of segmentation classes).
-
-    Returns:
-        nn.Module: U-Net model with specified number of input and output channels.
-
-    """
-
-    class DoubleConv(nn.Module):
-        """(convolution => [BN] => ReLU) * 2"""
-
-        def __init__(self, in_channels, out_channels, mid_channels=None):
-            super().__init__()
-            if not mid_channels:
-                mid_channels = out_channels
-            self.double_conv = nn.Sequential(
-                nn.Conv2d(
-                    in_channels, mid_channels, kernel_size=3, padding=1, bias=False
-                ),
-                nn.BatchNorm2d(mid_channels),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(
-                    mid_channels, out_channels, kernel_size=3, padding=1, bias=False
-                ),
-                nn.BatchNorm2d(out_channels),
-                nn.ReLU(inplace=True),
-            )
-
-        def forward(self, x):
-            return self.double_conv(x)
-
-    class Down(nn.Module):
-        """Downscaling with maxpool then double conv"""
-
-        def __init__(self, in_channels, out_channels):
-            super().__init__()
-            self.maxpool_conv = nn.Sequential(
-                nn.MaxPool2d(2), DoubleConv(in_channels, out_channels)
-            )
-
-        def forward(self, x):
-            return self.maxpool_conv(x)
-
-    class Up(nn.Module):
-        """Upscaling then double conv"""
-
-        def __init__(self, in_channels, out_channels, bilinear=True):
-            super().__init__()
-
-            # if bilinear, use the normal convolutions to reduce the number of channels
-            if bilinear:
-                self.up = nn.Upsample(
-                    scale_factor=2, mode="bilinear", align_corners=True
-                )
-                self.conv = DoubleConv(in_channels, out_channels, in_channels // 2)
-            else:
-                self.up = nn.ConvTranspose2d(
-                    in_channels, in_channels // 2, kernel_size=2, stride=2
-                )
-                self.conv = DoubleConv(in_channels, out_channels)
-
-        def forward(self, x1, x2):
-            x1 = self.up(x1)
-            # input is CHW
-            diffY = x2.size()[2] - x1.size()[2]
-            diffX = x2.size()[3] - x1.size()[3]
-
-            x1 = F.pad(
-                x1, [diffX // 2, diffX - diffX // 2, diffY // 2, diffY - diffY // 2]
-            )
-            x = torch.cat([x2, x1], dim=1)
-            return self.conv(x)
-
-    class OutConv(nn.Module):
-        def __init__(self, in_channels, out_channels):
-            super(OutConv, self).__init__()
-            self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
-
-        def forward(self, x):
-            return self.conv(x)
-
-    class UNet(nn.Module):
-        def __init__(self, n_channels, n_classes, bilinear=False):
-            super(UNet, self).__init__()
-            self.n_channels = n_channels
-            self.n_classes = n_classes
-            self.bilinear = bilinear
-
-            self.inc = DoubleConv(n_channels, 64)
-            self.down1 = Down(64, 128)
-            self.down2 = Down(128, 256)
-            self.down3 = Down(256, 512)
-            factor = 2 if bilinear else 1
-            self.down4 = Down(512, 1024 // factor)
-            self.up1 = Up(1024, 512 // factor, bilinear)
-            self.up2 = Up(512, 256 // factor, bilinear)
-            self.up3 = Up(256, 128 // factor, bilinear)
-            self.up4 = Up(128, 64, bilinear)
-            self.outc = OutConv(64, n_classes)
-
-        def forward(self, x):
-            x1 = self.inc(x)
-            x2 = self.down1(x1)
-            x3 = self.down2(x2)
-            x4 = self.down3(x3)
-            x5 = self.down4(x4)
-            x = self.up1(x5, x4)
-            x = self.up2(x, x3)
-            x = self.up3(x, x2)
-            x = self.up4(x, x1)
-            logits = self.outc(x)
-            return logits
-
-        def use_checkpointing(self):
-            self.inc = torch.utils.checkpoint(self.inc)
-            self.down1 = torch.utils.checkpoint(self.down1)
-            self.down2 = torch.utils.checkpoint(self.down2)
-            self.down3 = torch.utils.checkpoint(self.down3)
-            self.down4 = torch.utils.checkpoint(self.down4)
-            self.up1 = torch.utils.checkpoint(self.up1)
-            self.up2 = torch.utils.checkpoint(self.up2)
-            self.up3 = torch.utils.checkpoint(self.up3)
-            self.up4 = torch.utils.checkpoint(self.up4)
-            self.outc = torch.utils.checkpoint(self.outc)
-
-    model = UNet(n_channels, n_classes).to(device)
-    return model
-
-
-def calculate_encoder_output_size(input_shape, device):
-    class CNN(nn.Module):
-        def __init__(self):
-            super(CNN, self).__init__()
-            # Custom encoder with 4 input channels
-            self.encoder = nn.Sequential(
-                nn.Conv2d(4, 64, kernel_size=3, stride=1, padding=1),
-                nn.ReLU(inplace=True),
-                nn.MaxPool2d(kernel_size=2, stride=2),
-                nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-                nn.ReLU(inplace=True),
-                nn.MaxPool2d(kernel_size=2, stride=2),
-                nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
-                nn.ReLU(inplace=True),
-                nn.MaxPool2d(kernel_size=2, stride=2),
-                nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=1),
-                nn.ReLU(inplace=True),
-                nn.MaxPool2d(kernel_size=2, stride=2),
-            )
-
-            # Calculate the output size of the encoder dynamically based on the input_shape
-            with torch.no_grad():
-                test_input = torch.zeros(
-                    1, *input_shape
-                )  # Create a dummy tensor with batch size 1
-                enc_features = self.encoder(test_input)
-                self.encoder_output_size = enc_features.view(
-                    enc_features.size(0), -1
-                ).shape[1]
-
-            # Classifier with fully connected layers
-            self.classifier = nn.Sequential(
-                nn.Linear(
-                    self.encoder_output_size, 128
-                ),  # Adjust the input size based on the encoder's output size
-                nn.ReLU(inplace=True),
-                nn.Linear(
-                    128, 1
-                ),  # Output only 1 value for regression task (height prediction)
-                # nn.Sigmoid()  # Remove Sigmoid for regression
-            )
-
-        def forward(self, x):
-            enc_features = self.encoder(x)
-            features = enc_features.view(enc_features.size(0), -1)
-            output = self.classifier(features)
-            return output
-
-    model = CNN().to(device)
-    return model
-
-
-def resnet_model(input_shape, device):
-    """
-    Define the adapted ResNet model architecture for regression.
-
-    :param input_shape: shape of the input tensor (excluding batch dimension)
-    :return: a PyTorch Model representing the ResNet model for regression
-    """
-
-    class ResNet(nn.Module):
-        def __init__(self):
-            super(ResNet, self).__init__()
-            self.features = models.resnet18(pretrained=True)
-            self.features.conv1 = nn.Conv2d(
-                input_shape[0], 64, kernel_size=7, stride=2, padding=3, bias=False
-            )  # Change the first layer to accept input_shape[0] channels
-            self.features.fc = nn.Linear(
-                512, 1
-            )  # Output only 1 value for regression (height prediction)
-            # No activation function (no nn.Sigmoid()) for regression
-
-        def forward(self, x):
-            features = self.features(x)
-            output = features.view(
-                features.size(0), -1
-            )  # Flatten the output for regression
-            return output
-
-    model = ResNet().to(device)
-    return model
-
-
-def encoder_decoder_model(input_shape, device):
-    """
-    Define the adapted Encoder-Decoder model architecture for regression.
-
-    :param input_shape: shape of the input tensor (excluding batch dimension)
-    :return: a PyTorch Model representing the Encoder-Decoder model for regression
-    """
-
-    class EncoderDecoder(nn.Module):
-        def __init__(self):
-            super(EncoderDecoder, self).__init__()
-            self.encoder = models.vgg16(pretrained=True).features[:23]
-            self.encoder[0] = nn.Conv2d(
-                input_shape[0], 64, kernel_size=7, stride=2, padding=3, bias=False
-            )  # Change the first layer to accept input_shape[0] channels
-            self.decoder = nn.Sequential(
-                nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
-                nn.Conv2d(512, 256, 3, padding=1),
-                nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
-                nn.Conv2d(256, 128, 3, padding=1),
-                nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
-                nn.Conv2d(128, 64, 3, padding=1),
-                nn.Conv2d(
-                    64, 1, 1
-                ),  # Output 1 channel for regression (predicted height)
-                # No activation function (no nn.Sigmoid()) for regression
-            )
-
-        def forward(self, x):
-            enc_features = self.encoder(x)
-            dec_features = self.decoder(enc_features)
-            return dec_features
-
-    model = EncoderDecoder().to(device)
-    return model
-
-
 # Define the input shape of the U-Net model
-input_shape = 4  # smoothed_train_input.shape[1:]
+input_shape = smoothed_train_input.shape[1:] #4
 n_classes = 1
 
 # Create the U-Net model
 model = unet_model(input_shape, n_classes)
-# # Create the ResNet model
+# Create the ResNet model
 # model = resnet_model(input_shape, device)
-# # Create the CNN model
+# Create the CNN model
 # model = calculate_encoder_output_size(input_shape, device)
-# # Create the Encoder-Decoder model
+# Create the Encoder-Decoder model
 # model = encoder_decoder_model(input_shape, device)
 
 # Move the model to the appropriate device
@@ -451,13 +184,11 @@ else:
     print("Model is not loaded on CPU.")
 
 # Load the saved state dictionary into the model
-# model_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Trained_U-net_10_epochs_batch_size_16 - 11 August.pth"
-model_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Trained_U-net_2_epochs_batch_size_16 - 19 August.pth"
 model.load_state_dict(torch.load(model_path))
 
-# -------------------------------------------------------------------------------------------------------------
-# Prediction at the patch level
-# -------------------------------------------------------------------------------------------------------------
+#################################################################################################################################
+# Part 3: Prediction at the patch level
+#################################################################################################################################
 
 # Put the model in evaluation mode
 model.eval()
@@ -500,9 +231,9 @@ scaling_factor = torch.max(
 # Rescale the predictions to the original range of target data
 predicted_output_rescaled = predicted_output * scaling_factor
 
-# -------------------------------------------------------------------------------------------------------------
-# Plotting the predictions
-# -------------------------------------------------------------------------------------------------------------
+#################################################################################################################################
+# Part 4: Plotting the predictions at the patch level
+#################################################################################################################################
 
 # Convert the tensors to numpy arrays
 sample_input_array = sample_input.permute(1, 2, 0).cpu().numpy()
@@ -532,7 +263,6 @@ axes[2].axis("off")
 plt.show()
 
 # Create a confusion plot with 2D histograms for ground truth and predictions
-
 ground_truth_np = sample_target_valid.cpu().numpy().squeeze()
 predictions_np = predicted_output_rescaled.cpu().numpy().squeeze()
 
@@ -555,13 +285,11 @@ plt.ylabel("Predictions")
 plt.title("Confusion Plot")
 plt.show()
 
-
 # Define functions to calculate the metrics
 def mse_loss_no_nan(y_true, y_pred):
     valid_mask = ~torch.isnan(y_true)
     mse = torch.mean((y_true[valid_mask] - y_pred[valid_mask]) ** 2)
     return mse
-
 
 def peak_signal_noise_ratio(y_true, y_pred):
     valid_mask = ~torch.isnan(y_true)
@@ -569,19 +297,16 @@ def peak_signal_noise_ratio(y_true, y_pred):
     psnr = 20 * torch.log10(torch.max(y_true[valid_mask])) - 10 * torch.log10(mse)
     return psnr
 
-
 def rmse_loss_no_nan(y_true, y_pred):
     valid_mask = ~torch.isnan(y_true)
     mse = mse_loss_no_nan(y_true, y_pred)
     rmse = torch.sqrt(mse)
     return rmse
 
-
 def mbe_loss_no_nan(y_true, y_pred):
     valid_mask = ~torch.isnan(y_true)
     mbe = torch.mean(y_true[valid_mask] - y_pred[valid_mask])
     return mbe
-
 
 def bce_loss_no_nan(y_true, y_pred):
     valid_mask = ~torch.isnan(y_true)
@@ -686,12 +411,12 @@ plt.legend()
 plt.show()
 
 #################################################################################################################################
-# Generate wall-to-wall tree height map
-# Generalization of the individual prediction
+# Part 5: Generate wall-to-wall tree height map
 #################################################################################################################################
 
+# -------------------------------------------------------------------------------------------------------------
 # Step 1: Reproject to 1m Resolution and Normalize TIFF Files
-
+# -------------------------------------------------------------------------------------------------------------
 
 def calculate_valid_utm_zone(longitude):
     zone = int((longitude + 180) / 6) + 1
@@ -835,10 +560,10 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
             resampling=Resampling.nearest,
         )  # Resampling.bilinear
 
-        # # Visual verification - Display the reprojected image
-        # plt.imshow(reprojected_data[0], cmap='viridis')
-        # plt.title("Reprojected Image")
-        # plt.show()
+        # Visual verification - Display the reprojected image
+        plt.imshow(reprojected_data[0], cmap='viridis')
+        plt.title("Reprojected Image")
+        plt.show()
 
         # Define the processed profile
         processed_profile = {
@@ -873,7 +598,6 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
                 )
 
             # Now perform prediction
-            # model = unet_model(input_shape=(4, patch_size, patch_size), n_classes=1)
             model.to(device)
             model.eval()
 
@@ -923,7 +647,6 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
 
         print(f"Merged and saved all predictions to {merged_output_path}")
 
-
 # Paths to input and output folders
 input_folder = (
     r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\planet_tiles\Test"
@@ -947,7 +670,7 @@ for filename in os.listdir(input_folder):
 
 # Paths for predicted TIFFs and aggregated output
 predicted_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet\Predicted_Windows"
-aggregated_output = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Final_Products\Aggregated_Output_1m.tif"
+aggregated_output = "Aggregated_Output_1m.tif"
 
 # List all predicted TIFFs
 predicted_files = glob.glob(os.path.join(predicted_folder, "*.tif"))
@@ -992,19 +715,18 @@ aggregated_ds.SetGeoTransform(profile["transform"])
 aggregated_ds.SetProjection(profile["crs"].to_wkt())
 aggregated_ds = None  # Close the dataset
 
-# # Visual verification - Display the aggregated image
-# with rasterio.open(aggregated_output) as src:
-#     plt.imshow(src.read(1), cmap="viridis")
-#     plt.title("Aggregated Image")
-#     plt.show()
-
+# Visual verification - Display the aggregated image
+with rasterio.open(aggregated_output) as src:
+    plt.imshow(src.read(1), cmap="viridis")
+    plt.title("Aggregated Image")
+    plt.show()
 
 # -------------------------------------------------------------------------------------------------------------
 # Step 3: Convert Resolution to 1-ha grid cell map
 # -------------------------------------------------------------------------------------------------------------
 
 # Path for the resampled output TIFF
-output_resampled_tiff = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Final_Products\Aggregated_Output_100m.tif"
+output_resampled_tiff = "Aggregated_Output_100m.tif"
 
 # Desired grid cell size in square meters (1 hectare)
 grid_cell_size = 10000  # 100m x 100m
@@ -1063,7 +785,7 @@ with rasterio.open(output_resampled_tiff) as grid_cell_src:
     plt.show()
 
 # -------------------------------------------------------------------------------------------------------------
-# Studying uncertainty at the pixel level
+# Step 4: Studying uncertainty at the pixel level
 # -------------------------------------------------------------------------------------------------------------
 
 # List to store prediction arrays
@@ -1086,91 +808,16 @@ plt.title("Pixel-wise Standard Deviation")
 plt.colorbar()
 plt.show()
 
+#################################################################################################################################
+# Part 5: Generate Visualizations
+#################################################################################################################################
 
-# -------------------------------------------------------------------------------------------------------------
-# Prediction at the dataset level - OLD
-# -------------------------------------------------------------------------------------------------------------
-
-
-# Perform prediction on the entire dataset (normalized_test_input) using the trained model
-# Define the batch size for prediction
-prediction_batch_size = 4
-
-# Perform prediction on the entire dataset using the trained model
-predicted_outputs = []
-with torch.no_grad():
-    for batch_start in range(0, len(normalized_test_input), prediction_batch_size):
-        batch_input = normalized_test_input[
-            batch_start : batch_start + prediction_batch_size
-        ].to(device)
-        batch_target = normalized_test_target[
-            batch_start : batch_start + prediction_batch_size
-        ].to(device)
-
-        batch_predicted = model(batch_input)
-        predicted_outputs.append(batch_predicted)
-
-        # Release GPU memory
-        torch.cuda.empty_cache()
-
-# Concatenate the predicted outputs into a single tensor
-predicted_outputs = torch.cat(predicted_outputs, dim=0)
-
-# Extract the tree height values from the predicted mask
-tree_heights = (
-    predicted_outputs[:, :, :, :].cpu().numpy()
-)  # selecting first channel (index 0)
-
-# Element-wise multiplication to create a wall-to-wall tree height map
-tree_height_map = tree_heights * normalized_test_input.cpu().numpy()
-
-# Convert the tree height map to a NumPy array with the desired data type
-tree_height_map_np = tree_height_map.astype(np.float32)
-
-# Save the tree height map to a new GeoTIFF file (Kalimantan_canopy_height.tif)
-output_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Kalimantan_canopy_height.tif"
-height, width = tree_height_map.shape[2:]
-bbox = (108, -5, 120, 7.5)
-resolution = 1  # in meters
-x_origin = bbox[0]
-y_origin = bbox[3]
-transform = rasterio.transform.from_origin(x_origin, y_origin, resolution, resolution)
-crs = rasterio.crs.CRS.from_epsg(4326)
-
-# Open the GeoTIFF file for writing
-with rasterio.open(
-    output_file,
-    "w",
-    driver="GTiff",
-    height=height,
-    width=width,
-    count=4,
-    dtype=tree_height_map_np.dtype,
-    crs=crs,
-    transform=transform,
-) as dst:
-    for tile_idx in range(tree_height_map_np.shape[0]):  # Loop through the tiles
-        for band_idx in range(tree_height_map_np.shape[1]):  # Loop through the bands
-            band_data = tree_height_map_np[tile_idx, band_idx, :, :]
-            dst.write(band_data, indexes=band_idx + 1)  # Write each band to the GeoTIFF
-
-# Calculate the value range in meters and print it
-value_min = tree_height_map.min()
-value_max = tree_height_map.max()
-print(f"Value range: {value_min} meters to {value_max} meters")
-
-# Visualisations
-# ----------------
-
-import datashader as ds
-import datashader.transfer_functions as tf
-
-# # NOT WORKING AT THE MOMENT: Visualize the generated wall-to-wall tree height map using Datashader
-# tree_height_map_ds = ds.Canvas(plot_width=tree_height_map.shape[2], plot_height=tree_height_map.shape[3])
-# agg = tree_height_map_ds.points(tree_height_map[0], agg=ds.by("band"))
-# agg_shaded = tf.shade(agg, cmap=["blue", "green", "red"], how='linear')
-# tf.set_background(agg_shaded, "black")
-# tf.Image(agg_shaded).show()
+# Visualize the generated wall-to-wall tree height map using Datashader
+tree_height_map_ds = ds.Canvas(plot_width=tree_height_map.shape[2], plot_height=tree_height_map.shape[3])
+agg = tree_height_map_ds.points(tree_height_map[0], agg=ds.by("band"))
+agg_shaded = tf.shade(agg, cmap=["blue", "green", "red"], how='linear')
+tf.set_background(agg_shaded, "black")
+tf.Image(agg_shaded).show()
 
 # Histogram comparing the observed tree heights from the input data (ground truth) with the predicted tree heights from our model
 observed_tree_heights = (
@@ -1249,7 +896,7 @@ plt.title(f"Observed vs. Predicted Tree Heights\nR2: {r_squared:.3f}, RMSE: {rms
 plt.legend()
 plt.show()
 
-# Alternative scatter plot using hvPlot
+# Scatter plot using hvPlot
 data = pd.DataFrame({
     "Observed Tree Heights": observed_tree_heights_flat[valid_indices],
     "Predicted Tree Heights": predicted_tree_heights_flat[valid_indices]
@@ -1317,10 +964,8 @@ plt.show()
 
 
 #################################################################################################################################
-# Generate wall-to-wall variance map
+# Part 6: Generate wall-to-wall variance map
 #################################################################################################################################
-
-# Uncertainty at the pixel level
 
 # Calculate the variance of tree heights across the entire dataset
 tree_height_var = np.var(tree_height_map, axis=0)
@@ -1462,7 +1107,7 @@ plt.title("Box Plot of Observed and Predicted Tree Heights")
 plt.show()
 
 #################################################################################################################################
-# Compute and save Kalimantan_percent_cover.tif
+# Part 6: Compute and save Kalimantan_percent_cover.tif
 #################################################################################################################################
 
 # Calculate percent canopy cover by counting pixels higher than 5 meters within each 1-ha cell
@@ -1484,7 +1129,7 @@ for row in range(0, tree_height_map.shape[0], cell_size):
         )
 
 # Save the percent canopy cover map to a new GeoTIFF file (Kalimantan_percent_cover.tif)
-output_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Kalimantan_percent_cover.tif"
+output_file = "Kalimantan_percent_cover.tif"
 height, width = percent_cover.shape
 transform = rasterio.transform.from_origin(
     x_origin, y_origin, cell_size, cell_size
@@ -1512,7 +1157,7 @@ plt.show()
 
 
 #################################################################################################################################
-# Compute and save Kalimantan_LCA.tif
+# Part 7: Compute and save Kalimantan_LCA.tif
 #################################################################################################################################
 
 # To compute the Large Crown Area (LCA) within each 1-ha grid cell using the LCA algorithm, we'll follow the steps described:
@@ -1550,7 +1195,7 @@ for row in range(0, tree_height_map.shape[0], cell_size):
 lca_percent_cover = (lca_1ha_grid / (cell_size**2)) * 100
 
 # Save the Large Crown Area (LCA) percent cover map to a new GeoTIFF file (Kalimantan_LCA.tif)
-output_file_lca = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Kalimantan_LCA.tif"
+output_file_lca = "Kalimantan_LCA.tif"
 height, width = lca_percent_cover.shape
 transform_lca = rasterio.transform.from_origin(
     x_origin, y_origin, cell_size, cell_size
@@ -1577,7 +1222,7 @@ plt.show()
 
 
 #################################################################################################################################
-# Compute and save Kalimantan_degradation_index.tif
+# Part 8: Compute and save Kalimantan_degradation_index.tif
 #################################################################################################################################
 
 # Calculate the Forest Degradation Index (FDI) as FDI = MCH + LCA + PC
@@ -1585,7 +1230,7 @@ plt.show()
 fdi = tree_height_map + lca_percent_cover + percent_cover
 
 # Save the Forest Degradation Index (FDI) map to a new GeoTIFF file (Kalimantan_degradation_index.tif)
-output_file_fdi = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Kalimantan_degradation_index.tif"
+output_file_fdi = "Kalimantan_degradation_index.tif"
 
 # Classify FDI values into user-defined degradation severity classes
 # You can define the class thresholds as per your requirement
@@ -1623,7 +1268,7 @@ plt.title("Forest Degradation Index (FDI) Map")
 plt.show()
 
 #################################################################################################################################
-# ABG computation
+# Part 9: ABG computation
 #################################################################################################################################
 
 
@@ -1780,6 +1425,3 @@ print(
     f"Plot-level AGB using sub-sampling strategy: {AGB_plot_level_sub_sampling} Mgha^-1"
 )
 print(f"Plot-level AGB using tree-level strategy: {AGB_plot_level_tree_level} Mgha^-1")
-
-#############################################################################################################################
-#############################################################################################################################
