@@ -68,8 +68,8 @@ from Modelling import unet_model, calculate_encoder_output_size, resnet_model, e
 #################################################################################################################################
 
 # Define the paths to the input and target data folders
-input_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"  # Optical
-target_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"  # LiDAR
+input_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Processed Planet"  # Optical
+target_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR\Processed LiDAR"  # LiDAR
 
 # Load the data
 smoothed_train_input = smoothed_train_input.to(device)
@@ -587,9 +587,9 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
 
 # Paths to input and output folders
 input_folder = (
-    r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\planet_tiles\Test"
+    r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\planet_tiles\Test"
 )
-output_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet\Predicted_Windows"
+output_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Processed Planet\Predicted_Windows"
 
 # Patch size and overlap
 patch_size = 1024
@@ -607,7 +607,7 @@ for filename in os.listdir(input_folder):
 # -------------------------------------------------------------------------------------------------------------
 
 # Paths for predicted TIFFs and aggregated output
-predicted_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet\Predicted_Windows"
+predicted_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Processed Planet\Predicted_Windows"
 aggregated_output = "Aggregated_Output_1m.tif"
 
 # List all predicted TIFFs
@@ -912,7 +912,7 @@ tree_height_var = np.var(tree_height_map, axis=0)
 tree_height_var_map_np = tree_height_var.astype(np.float32)
 
 # Save the variance map to a new GeoTIFF file
-output_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Kalimantan_tree_height_variance.tif"
+output_file = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Kalimantan_tree_height_variance.tif"
 height, width = tree_height_var.shape[1:]
 transform = rasterio.transform.from_origin(x_origin, y_origin, resolution, resolution)
 crs = rasterio.crs.CRS.from_epsg(4326)
