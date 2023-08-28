@@ -20,8 +20,8 @@ from osgeo import gdal
 from matplotlib.colors import ListedColormap
 
 # Define the paths to the optical data folder
-optical_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet" 
-shapefile_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\global_grid_planet_projlatlon\global_grid_planet_projlatlon.shp"
+optical_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Processed Planet" 
+shapefile_path = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\global_grid_planet_projlatlon\global_grid_planet_projlatlon.shp"
 
 # List the optical files
 optical_files = sorted(glob.glob(os.path.join(optical_folder, "*_merged_modified.tif")))
