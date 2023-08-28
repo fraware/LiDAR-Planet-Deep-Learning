@@ -9,7 +9,7 @@ import rasterio
 import matplotlib.pyplot as plt
 import numpy as np
 
-image_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Polygon_014_utm_50S_merged.tif"
+image_file = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Polygon_014_utm_50S_merged.tif"
 sat_data = rasterio.open(image_file)
 
 ### Calculating the dimensions of the image on earth in metres
@@ -46,7 +46,7 @@ print(f"Sequence of Band Indexes: {sat_data.indexes}")
 
 # Computing the total number of pixels in all Planet files
 folder_path = (
-    r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles"
+    r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles"
 )
 
 # Initialize a variable to store the total pixel count
@@ -253,7 +253,7 @@ import matplotlib.pyplot as plt
 import os
 
 # Load the red, green, and NIR bands from the raster file
-filename = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Polygon_014_utm_50S_merged.tif"
+filename = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Polygon_014_utm_50S_merged.tif"
 with rasterio.open(filename) as src:
     band_red = src.read(3)
     band_green = src.read(2)
