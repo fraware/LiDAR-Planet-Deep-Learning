@@ -69,7 +69,7 @@ from osgeo import gdal
 #################################################################################################################################
 
 # Define the paths to the data folders
-wall_to_wall_map_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Output\wall_to_wall_map_kalimantan.tif"
+wall_to_wall_map_file = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Output\wall_to_wall_map_kalimantan.tif"
 
 # Open the wall-to-wall map file with rasterio
 with rasterio.open(wall_to_wall_map_file) as src:
@@ -102,7 +102,7 @@ with rasterio.open(wall_to_wall_map_file) as src:
                 ) * 100
 
     # Define the output file path for the percent canopy cover map
-    output_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\Kalimantan_percent_cover_1ha.tif"
+    output_file = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\Kalimantan_percent_cover_1ha.tif"
 
     # Get the metadata from the source file
     meta = src.meta.copy()
@@ -178,7 +178,7 @@ with rasterio.open(wall_to_wall_map_file) as src:
     lca_percent_cover = (lca_1ha_grid / (cell_size**2)) * 100
 
     # Define the output file path for the Large Crown Area (LCA) percent cover map
-    output_file_lca = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\Kalimantan_LCA.tif"
+    output_file_lca = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\Kalimantan_LCA.tif"
 
     # Get the metadata from the source file
     meta = src.meta.copy()
@@ -230,7 +230,7 @@ for row in range(0, tree_height_map.shape[0], cell_size):
 
 # Define the output file path for the MCH GeoTIFF
 output_file_mch = (
-    r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\Kalimantan_MCH.tif"
+    r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\Kalimantan_MCH.tif"
 )
 
 # Save the MCH values to a new GeoTIFF file
@@ -265,7 +265,7 @@ plt.show()
 fdi = mch_values + lca_percent_cover + percent_cover
 
 # Save the Forest Degradation Index (FDI) map to a new GeoTIFF file (Kalimantan_degradation_index.tif)
-output_file_fdi = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Kalimantan_degradation_index.tif"
+output_file_fdi = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Kalimantan_degradation_index.tif"
 
 # Classify FDI values into user-defined degradation severity classes
 # You can define the class thresholds as per your requirement
