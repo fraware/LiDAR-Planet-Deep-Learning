@@ -803,10 +803,10 @@ def check_number_of_bands(folder_path):
 
 # Define folder paths
 lidar_folder_path = (
-    r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR"
+    r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR"
 )
-output_folder_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"
-chm_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR\Polygon_008_utm_50N.tif"
+output_folder_path = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR\Processed LiDAR"
+chm_file = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR\Processed LiDAR\Polygon_008_utm_50N.tif"
 
 # Loading the CHM data
 chm_array = load_chm_tiff(chm_file)
