@@ -21,9 +21,9 @@ import folium
 #################################################################################################################################
 
 # Define the paths to the input and target data folders
-input_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"  
-target_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"  
-shapefile_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\global_grid_planet_projlatlon\global_grid_planet_projlatlon.shp"
+input_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Processed Planet"  
+target_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR\Processed LiDAR"  
+shapefile_path = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\global_grid_planet_projlatlon\global_grid_planet_projlatlon.shp"
 
 # List the input and target files
 input_files = sorted(glob.glob(os.path.join(input_folder, "*.tif")))
