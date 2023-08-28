@@ -50,6 +50,7 @@ The Modelling folder is dedicated to deep learning model development. It include
 - **Data_modelling**: Perform data preparation and modeling for random sampling.
 - **Training_validation**: Train and validate deep learning models.
 - **Predictions**: Perform model predictions at different levels.
+- **Biomass_analysis**: Perform a Biomass Analysis for each 1-hectare (1-ha) grid cell based on the predicted wall-to-wall map.
 - **Mapping_visualisation_NDVI_stratified_sampling**: Visualize the distribution of validation/training/test samples for NDVI stratified sampling.
 - **Mapping_visualisation_random_sampling**: Visualize the distribution of validation/training/test samples for random sampling.
 
