@@ -489,12 +489,12 @@ def visualize_chm(chm_file, chm_cleaned_file, extent, title):
 # 3. Remove the outliers from the border region
 
 # Define folder paths
-lidar_folder_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR"
-output_folder_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"
-chm_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\\Polygon_109_utm_50N.tif"
-chm_processed_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR\Polygon_109_utm_50N.tif"
-chm_cleaned_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR\Polygon_109_utm_50N_corrected.tif"
-chm_corrected_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR\Polygon_109_utm_50N_corrected_cleaned.tif"
+lidar_folder_path = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR"
+output_folder_path = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR\Processed LiDAR"
+chm_file = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR\\Polygon_109_utm_50N.tif"
+chm_processed_file = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR\Processed LiDAR\Polygon_109_utm_50N.tif"
+chm_cleaned_file = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR\Processed LiDAR\Polygon_109_utm_50N_corrected.tif"
+chm_corrected_file = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR\Processed LiDAR\Polygon_109_utm_50N_corrected_cleaned.tif"
 
 # Beginning of the operation
 get_max_tree_height(chm_file)
