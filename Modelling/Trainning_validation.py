@@ -59,8 +59,8 @@ import xarray as xr
 #################################################################################################################################
 
 # Define the paths to the input and target data folders
-input_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"  # Optical
-target_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\LiDAR\Processed LiDAR"  # LiDAR
+input_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Processed Planet"  # Optical
+target_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\LiDAR\Processed LiDAR"  # LiDAR
 
 # Load the preprocessed data
 smoothed_train_input = smoothed_train_input.to(device)
