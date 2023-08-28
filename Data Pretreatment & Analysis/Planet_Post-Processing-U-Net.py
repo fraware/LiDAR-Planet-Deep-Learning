@@ -295,16 +295,16 @@ if len(physical_devices) > 0:
 
 # Load the TIFF image
 data_folder = (
-    r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles"
+    r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles"
 )
-# data_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Test"
-results_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet U-Net"
+# data_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Test"
+results_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Processed Planet U-Net"
 
 # Load the pre-trained U-Net model
 model_path = (
-    r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\cloud_model.h5"
+    r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\cloud_model.h5"
 )
-# model_path = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\cloud_unet_tf2_00432_0_8636.h5"
+# model_path = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\cloud_unet_tf2_00432_0_8636.h5"
 
 # Create the U-Net model
 # unet_model = load_unet_model(model_path)
