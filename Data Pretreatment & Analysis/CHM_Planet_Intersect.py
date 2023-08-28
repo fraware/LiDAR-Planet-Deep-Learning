@@ -128,7 +128,7 @@ def create_dataset(data, crs, transform, chunk_size=128):
 # Define the base folder path
 # sourcery skip: use-named-expression
 base_folder = (
-    r"c:\Users\mpetel\Documents\Kalimatan Project\Code"
+    r"c:\Users\mpetel\Documents\Kalimantan Project\Code"
 )
 
 # Define the paths to the optical and LiDAR data folders
