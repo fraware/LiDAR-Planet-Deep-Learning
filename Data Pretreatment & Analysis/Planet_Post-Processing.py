@@ -242,8 +242,8 @@ Part 3: Applying the operations to create the masks
 #####################################################################################################################
 
 # Load the TIFF image
-data_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles"
-results_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"
+data_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles"
+results_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Processed Planet"
 
 # Process each image in img_files
 img_files = [img_file for img_file in glob.glob(os.path.join(data_folder, "*.tif"))]
@@ -312,8 +312,8 @@ def apply_mask_and_save_as_4_channel_tiff(planet_img_path, cloud_mask_path, clou
 #####################################################################################################################
 
 # Path to the directory containing Planet images and processed masks
-planet_data_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles"
-processed_masks_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\planet_tiles\Processed Planet"
+planet_data_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles"
+processed_masks_folder = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\planet_tiles\Processed Planet"
 
 # Get the list of Planet image files
 planet_img_files = [img_file for img_file in glob.glob(os.path.join(planet_data_folder, "*.tif"))]
