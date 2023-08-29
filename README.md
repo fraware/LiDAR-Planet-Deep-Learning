@@ -100,5 +100,5 @@ Lastly, we extend our thanks to the countless individuals and organizations who 
 
 ## License
 
-This project is licensed under the MIT License. See LICENSE for more details. 
+This project is licensed under the MIT License. See [MIT License](LICENSE) for more details. 
 
