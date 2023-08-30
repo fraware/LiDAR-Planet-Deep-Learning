@@ -125,7 +125,110 @@ else:
 model.load_state_dict(torch.load(model_path))
 
 #################################################################################################################################
-# Part 3: Prediction at the patch level
+# Part 3: Random Multiple Prediction at the patch level
+#################################################################################################################################
+
+# Put the model in evaluation mode
+model.eval()
+
+# Adjusting the shapes
+normalized_test_input = normalized_test_input.permute(0, 3, 1, 2)
+normalized_test_target = normalized_test_target.unsqueeze(1)
+
+# Number of random patches to predict
+num_patches = 5
+
+for _ in range(num_patches):
+    # Select a random sample from the test set for prediction (takes optical images and releases a canopy height mask)
+    sample_index = np.random.randint(len(normalized_test_input))
+    sample_input = normalized_test_input[sample_index]
+    sample_target = normalized_test_target[sample_index]
+
+    # Create a binary mask for valid values (1 for non-NaN, 0 for NaN)
+    input_mask = ~torch.isnan(sample_input)
+    target_mask = ~torch.isnan(sample_target)
+
+    # Apply the mask to the input and target
+    sample_input_valid = sample_input * input_mask.unsqueeze(0)  # Apply mask to all channels
+    sample_target_valid = sample_target * target_mask.unsqueeze(0)
+
+    # Reshape the valid samples for prediction
+    # Reshape the input to (1, channels, height, width)
+    sample_input_valid = sample_input_valid.to(device, dtype=torch.float32)
+
+    # Reshape the target to (1, 1, height, width)
+    sample_target_valid = sample_target_valid.to(device, dtype=torch.float32)
+
+    # Perform prediction
+    with torch.no_grad():
+        predicted_output = model(sample_input_valid)
+
+    # Calculate the scaling factor on non-NaN values
+    scaling_factor = torch.max(
+        sample_target_valid[torch.logical_not(torch.isnan(sample_target_valid))]
+    )
+
+    # Rescale the predictions to the original range of target data
+    predicted_output_rescaled = predicted_output * scaling_factor
+
+    # -------------------------------------------------------------------------------------------------------------
+    # Plotting the predictions for each patch
+    # -------------------------------------------------------------------------------------------------------------
+
+    # Convert the tensors to numpy arrays
+    sample_input_array = sample_input.permute(1, 2, 0).cpu().numpy()
+    sample_target_array = sample_target.squeeze().cpu().numpy()
+    predicted_output_array = predicted_output_rescaled.squeeze().cpu().numpy()
+
+    # Visualize the difference between target and predicted data
+    diff = np.abs(sample_target.cpu() - predicted_output_rescaled.cpu().numpy())
+
+    # Calculate the range of the absolute difference based on non-NaN values
+    non_nan_diff = diff[~np.isnan(diff)]
+    non_nan_diff = np.nan_to_num(non_nan_diff)  # Convert NaN values to zeros
+
+    # Calculate the range of the non-NaN absolute difference
+    diff_range = np.ptp(non_nan_diff)
+
+    # Display the original, target, and predicted images along with the difference range for each patch
+    fig, axes = plt.subplots(2, 3, figsize=(20, 10))
+
+    # Display the input channels
+    for i in range(min(sample_input_array.shape[2], 3)):
+        axes[0, i].imshow(sample_input_array[:, :, i], cmap="terrain")
+        axes[0, i].set_title(f"Input Channel {i+1}")
+        axes[0, i].axis("off")
+
+    # Display the target image
+    axes[0, 3].imshow(sample_target_array, cmap="viridis")
+    axes[0, 3].set_title("Target")
+    axes[0, 3].axis("off")
+
+    # Display the predicted image
+    axes[0, 4].imshow(predicted_output_array, cmap="terrain")
+    axes[0, 4].set_title("Predicted")
+    axes[0, 4].axis("off")
+
+    # Show the difference range
+    axes[0, 5].imshow(diff, cmap="coolwarm")
+    axes[0, 5].set_title("Absolute Difference")
+    axes[0, 5].axis("off")
+
+    # Histogram of tree height values for each sample
+    axes[1, 0].hist(sample_target_array[~np.isnan(sample_target_array)], bins=20, color='blue', alpha=0.5, label='Target')
+    axes[1, 0].hist(predicted_output_array[~np.isnan(predicted_output_array)], bins=20, color='red', alpha=0.5, label='Predicted')
+    axes[1, 0].set_title("Tree Height Histogram")
+    axes[1, 0].legend()
+
+    # Show the plot for each patch
+    plt.show()
+
+    # Print the calculated difference range for each patch
+    print(f"Range of Absolute Difference (Patch {sample_index}): {diff_range}")
+
+
+#################################################################################################################################
+# Part 4: Prediction at the patch level
 #################################################################################################################################
 
 # Put the model in evaluation mode
@@ -348,6 +451,115 @@ plt.title("Precision-Recall Curve")
 plt.legend()
 plt.show()
 
+
+# Histogram comparing the observed tree heights from the input data (ground truth) with the predicted tree heights from our model
+observed_tree_heights = sample_target_valid.cpu().numpy()
+predicted_tree_heights = predicted_output_rescaled.cpu().numpy()
+plt.hist(
+    observed_tree_heights.flatten(), bins=50, alpha=0.5, color="blue", label="Observed"
+)
+plt.hist(
+    predicted_tree_heights.flatten(),
+    bins=50,
+    alpha=0.5,
+    color="orange",
+    label="Predicted",
+)
+plt.xlabel("Tree Height")
+plt.ylabel("Frequency")
+plt.title("Distribution of Tree Heights: Observed vs. Predicted")
+plt.legend()
+plt.show()
+
+# Scatter plot with observed tree heights on the x-axis and predicted tree heights on the y-axis.
+
+# Flatten the observed and predicted tree heights arrays
+observed_tree_heights_flat = observed_tree_heights.flatten()
+predicted_tree_heights_flat = predicted_tree_heights.flatten()
+
+# Find valid indices where both observed and predicted heights are not NaN
+valid_indices = np.logical_and(
+    ~np.isnan(observed_tree_heights_flat), ~np.isnan(predicted_tree_heights_flat)
+)
+
+# Use valid indices to filter the data
+observed_tree_heights_valid = observed_tree_heights_flat[valid_indices]
+predicted_tree_heights_valid = predicted_tree_heights_flat[valid_indices]
+
+# Calculate R-squared using vectorized operations
+observed_mean = np.mean(observed_tree_heights_valid)
+predicted_mean = np.mean(predicted_tree_heights_valid)
+numerator = np.sum(
+    (observed_tree_heights_valid - observed_mean)
+    * (predicted_tree_heights_valid - predicted_mean)
+)
+denominator_observed = np.sqrt(
+    np.sum((observed_tree_heights_valid - observed_mean) ** 2)
+)
+denominator_predicted = np.sqrt(
+    np.sum((predicted_tree_heights_valid - predicted_mean) ** 2)
+)
+r_squared = (numerator / (denominator_observed * denominator_predicted)) ** 2
+
+# Calculate RMSE using vectorized operations
+rmse = np.sqrt(
+    np.mean((predicted_tree_heights_valid - observed_tree_heights_valid) ** 2)
+)
+
+# Create the scatter plot
+plt.scatter(
+    observed_tree_heights_valid,
+    predicted_tree_heights_valid,
+    alpha=0.5,
+    color="blue",
+    label="Data",
+)
+plt.plot(
+    observed_tree_heights_valid,
+    observed_tree_heights_valid,
+    color="orange",
+    label="Regression Line",
+)
+plt.xlabel("Observed Tree Heights")
+plt.ylabel("Predicted Tree Heights")
+plt.title(f"Observed vs. Predicted Tree Heights\nR2: {r_squared:.3f}, RMSE: {rmse:.3f}")
+plt.legend()
+plt.show()
+
+# Alternative scatter plot using hvPlot
+data = pd.DataFrame(
+    {
+        "Observed Tree Heights": observed_tree_heights_flat[valid_indices],
+        "Predicted Tree Heights": predicted_tree_heights_flat[valid_indices],
+    }
+)
+
+# Create a binned scatter plot with a trendline using hvPlot
+scatter = data.hvplot.scatter(
+    x="Observed Tree Heights",
+    y="Predicted Tree Heights",
+    alpha=0.5,
+    color="blue",
+    width=600,
+    height=400,
+    title=f"Observed vs. Predicted Tree Heights\nR2: {r_squared:.3f}, RMSE: {rmse:.3f}",
+)
+trendline = hv.Curve(
+    [
+        (min(data["Observed Tree Heights"]), min(data["Observed Tree Heights"])),
+        (max(data["Observed Tree Heights"]), max(data["Observed Tree Heights"])),
+    ],
+    label="Regression Line",
+    color="orange",
+)
+
+# Combine the scatter plot and trendline
+scatter_with_trend = (scatter * trendline).opts(legend_position="top_left")
+
+# Show the plot
+scatter_with_trend
+
+
 #################################################################################################################################
 # Part 5: Generate wall-to-wall tree height map
 #################################################################################################################################
@@ -430,6 +642,7 @@ def generate_data_windows_from_array(array, patch_size, overlap):
             yield window
 
 
+
 def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
     """
     Reproject geospatial data from one CRS to another.
@@ -495,13 +708,13 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
             src_crs=planet_data.crs,
             dst_transform=new_transform,
             dst_crs=target_crs,
-            resampling=Resampling.nearest,
-        )  # Resampling.bilinear
+            resampling=Resampling.bilinear,
+        )  # Resampling.nearest
 
-        # Visual verification - Display the reprojected image
-        plt.imshow(reprojected_data[0], cmap='viridis')
-        plt.title("Reprojected Image")
-        plt.show()
+        # # Visual verification - Display the reprojected image
+        # plt.imshow(reprojected_data[0], cmap='viridis')
+        # plt.title("Reprojected Image")
+        # plt.show()
 
         # Define the processed profile
         processed_profile = {
@@ -523,6 +736,7 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
                 window.row_off : window.row_off + window.height,
                 window.col_off : window.col_off + window.width,
             ]
+
             data = data / 255
             if data.shape[1] < patch_size or data.shape[2] < patch_size:
                 data = np.pad(
@@ -536,6 +750,7 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
                 )
 
             # Now perform prediction
+            # model = unet_model(input_shape=(4, patch_size, patch_size), n_classes=1)
             model.to(device)
             model.eval()
 
@@ -544,6 +759,20 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
             )
             with torch.no_grad():
                 predicted_output = model(input_tensor)
+
+            # Create a unique processed_profile for each predicted window
+            processed_profile = {
+                "driver": "GTiff",
+                "width": window.width,
+                "height": window.height,
+                "count": predicted_output.shape[1],
+                #"dtype": planet_data.dtypes[0],
+                "crs": target_crs,
+                "transform": new_transform,
+                # "transform": from_origin(
+                #     new_transform.c, new_transform.f, new_transform.a, new_transform.e
+                # ),
+            }
 
             # Save the predicted output as individual TIFF files
             predicted_window_filename = f"{os.path.splitext(os.path.basename(output_tiff_path))[0]}_predicted_window_{window.row_off}_{window.col_off}.tif"
@@ -554,6 +783,10 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
             # Reshape the predicted_output tensor to match the window size
             predicted_data = predicted_output[0, 0].cpu().numpy()
 
+            # print("Predicted Data Summary:")
+            # print(f"Min Value: {predicted_data.min()}")
+            # print(f"Max Value: {predicted_data.max()}")
+
             # Use the processed profile instead of src.profile
             with rasterio.open(
                 predicted_window_path, "w", **processed_profile, compress="lzw"
@@ -562,28 +795,47 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
 
             print(f"Processed and Predicted on {predicted_window_filename}")
 
-        # Merge the individual TIFF files using rasterio.merge
-        predicted_files = glob.glob(os.path.join(output_folder, "*.tif"))
-        with rasterio.open(predicted_files[0]) as first_pred:
-            profile = first_pred.profile
 
-        # Construct the merged output path using the input TIFF's base name
-        merged_output_path = f"{os.path.splitext(os.path.basename(output_tiff_path))[0]}_merged_predicted_output.tif"
+def merge_predicted_tiff_files_vrt(
+    output_folder, output_tiff_path, output_folder_tiles
+):
+    # Get a list of all predicted TIFF files in the output folder
+    predicted_files = glob.glob(os.path.join(output_folder, "*.tif"))
 
-        src_files_to_merge = [rasterio.open(fp) for fp in predicted_files]
-        mosaic, out_trans = merge(src_files_to_merge)
+    # Create a VRT file that includes all the predicted TIFF files
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    base_filename = os.path.splitext(os.path.basename(output_tiff_path))[0]
+    vrt_file = os.path.join(output_folder, f"{base_filename}_{timestamp}_predicted_files.vrt")
 
-        profile.update(
-            dtype=rasterio.float32,
-            count=len(src_files_to_merge),
-            compress="lzw",
-            nodata=None,
-        )
+    # Use gdalbuildvrt to create the VRT file
+    gdalbuildvrt_command = ["gdalbuildvrt", "-input_file_list", vrt_file]
+    gdalbuildvrt_command.extend(predicted_files)
+    subprocess.run(gdalbuildvrt_command)
 
-        with rasterio.open(merged_output_path, "w", **profile) as dest:
-            dest.write(mosaic)
+    # Use gdal_translate to merge the VRT file into a single output TIFF
+    merged_output_file = f"{base_filename}_{timestamp}_merged_predicted_output.tif"
+    merged_output_path = os.path.join(output_folder_tiles, merged_output_file)
 
-        print(f"Merged and saved all predictions to {merged_output_path}")
+    # Run gdal_translate command to create the merged TIFF
+    gdal_translate_command = [
+        "gdal_translate",
+        "-of",
+        "GTiff",
+        vrt_file,
+        merged_output_path,
+    ]
+    subprocess.run(gdal_translate_command)
+
+    print(f"Merged and saved predictions to {merged_output_path}")
+
+    # Visual verification of the merged output
+    with rasterio.open(merged_output_path) as merged_pred:
+        plt.figure(figsize=(10, 8))
+        plt.imshow(merged_pred.read(1), cmap="viridis")
+        plt.title("Merged Predicted Output")
+        plt.colorbar()
+        plt.show()
+
 
 # Paths to input and output folders
 input_folder = (
@@ -601,6 +853,7 @@ for filename in os.listdir(input_folder):
         input_path = os.path.join(input_folder, filename)
         output_path = os.path.join(output_folder, filename)
         prediction(input_path, output_path, patch_size, overlap)
+        merge_predicted_tiff_files_vrt(output_folder, output_path, output_folder_tiles)
 
 # -------------------------------------------------------------------------------------------------------------
 # Step 2: Aggregate Predicted Files and Merge using GDAL
@@ -722,6 +975,9 @@ with rasterio.open(output_resampled_tiff) as grid_cell_src:
     plt.title("Grid Cell Map (1 Hectare)")
     plt.show()
 
+
+
+
 # -------------------------------------------------------------------------------------------------------------
 # Step 4: Studying uncertainty at the pixel level
 # -------------------------------------------------------------------------------------------------------------
@@ -746,175 +1002,237 @@ plt.title("Pixel-wise Standard Deviation")
 plt.colorbar()
 plt.show()
 
-#################################################################################################################################
-# Part 5: Generate Visualizations
-#################################################################################################################################
 
-# Visualize the generated wall-to-wall tree height map using Datashader
-tree_height_map_ds = ds.Canvas(plot_width=tree_height_map.shape[2], plot_height=tree_height_map.shape[3])
-agg = tree_height_map_ds.points(tree_height_map[0], agg=ds.by("band"))
-agg_shaded = tf.shade(agg, cmap=["blue", "green", "red"], how='linear')
-tf.set_background(agg_shaded, "black")
-tf.Image(agg_shaded).show()
+# -------------------------------------------------------------------------------------------------------------
+#  Step 4: Wall-to-wall Map Visualisations
+# -------------------------------------------------------------------------------------------------------------
 
-# Histogram comparing the observed tree heights from the input data (ground truth) with the predicted tree heights from our model
-observed_tree_heights = (
-    normalized_test_target[:, 0, :, :].cpu().numpy()
-)  # Assuming the tree height is in the first channel
-predicted_tree_heights = predicted_outputs[:, 0, :, :].cpu().numpy()
-plt.hist(
-    observed_tree_heights.flatten(), bins=50, alpha=0.5, color="blue", label="Observed"
-)
-plt.hist(
-    predicted_tree_heights.flatten(),
-    bins=50,
-    alpha=0.5,
-    color="orange",
-    label="Predicted",
-)
-plt.xlabel("Tree Height")
-plt.ylabel("Frequency")
-plt.title("Distribution of Tree Heights: Observed vs. Predicted")
-plt.legend()
-plt.show()
+# Define the paths to the data folders
+wall_to_wall_map_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Output\wall_to_wall_map_kalimantan.tif"
 
-# Scatter plot with observed tree heights on the x-axis and predicted tree heights on the y-axis.
-from scipy.stats import linregress
+# Open the wall-to-wall map file with rasterio
+with rasterio.open(wall_to_wall_map_file) as src:
+    # Read the wall-to-wall map data as a numpy array
+    tree_height_map = src.read(1)
 
-# Flatten the observed and predicted tree heights arrays
-observed_tree_heights_flat = observed_tree_heights.flatten()
-predicted_tree_heights_flat = predicted_tree_heights.flatten()
+    # Visualize the generated wall-to-wall tree height map using Datashader
+    tree_height_map_ds = ds.Canvas(plot_width=tree_height_map.shape[2], plot_height=tree_height_map.shape[3])
+    agg = tree_height_map_ds.points(tree_height_map[0], agg=ds.by("band"))
+    agg_shaded = tf.shade(agg, cmap=["blue", "green", "red"], how='linear')
+    tf.set_background(agg_shaded, "black")
+    tf.Image(agg_shaded).show()
 
-# Find valid indices where both observed and predicted heights are not NaN
-valid_indices = np.logical_and(
-    ~np.isnan(observed_tree_heights_flat), ~np.isnan(predicted_tree_heights_flat)
-)
+    # Histogram comparing the observed tree heights from the input data (ground truth) with the predicted tree heights from our model
+    observed_tree_heights = (
+        normalized_test_target[:, 0, :, :].cpu().numpy()
+    )  # Assuming the tree height is in the first channel
+    predicted_tree_heights = predicted_output[:, 0, :, :].cpu().numpy()
+    plt.hist(
+        observed_tree_heights.flatten(), bins=50, alpha=0.5, color="blue", label="Observed"
+    )
+    plt.hist(
+        predicted_tree_heights.flatten(),
+        bins=50,
+        alpha=0.5,
+        color="orange",
+        label="Predicted",
+    )
+    plt.xlabel("Tree Height")
+    plt.ylabel("Frequency")
+    plt.title("Distribution of Tree Heights: Observed vs. Predicted")
+    plt.legend()
+    plt.show()
 
-# Use valid indices to filter the data
-observed_tree_heights_valid = observed_tree_heights_flat[valid_indices]
-predicted_tree_heights_valid = predicted_tree_heights_flat[valid_indices]
+    # Scatter plot with observed tree heights on the x-axis and predicted tree heights on the y-axis.
+    # Flatten the observed and predicted tree heights arrays
+    observed_tree_heights_flat = observed_tree_heights.flatten()
+    predicted_tree_heights_flat = predicted_tree_heights.flatten()
 
-# Calculate R-squared using vectorized operations
-observed_mean = np.mean(observed_tree_heights_valid)
-predicted_mean = np.mean(predicted_tree_heights_valid)
-numerator = np.sum(
-    (observed_tree_heights_valid - observed_mean)
-    * (predicted_tree_heights_valid - predicted_mean)
-)
-denominator_observed = np.sqrt(
-    np.sum((observed_tree_heights_valid - observed_mean) ** 2)
-)
-denominator_predicted = np.sqrt(
-    np.sum((predicted_tree_heights_valid - predicted_mean) ** 2)
-)
-r_squared = (numerator / (denominator_observed * denominator_predicted)) ** 2
+    # Find valid indices where both observed and predicted heights are not NaN
+    valid_indices = np.logical_and(
+        ~np.isnan(observed_tree_heights_flat), ~np.isnan(predicted_tree_heights_flat)
+    )
 
-# Calculate RMSE using vectorized operations
-rmse = np.sqrt(
-    np.mean((predicted_tree_heights_valid - observed_tree_heights_valid) ** 2)
-)
+    # Use valid indices to filter the data
+    observed_tree_heights_valid = observed_tree_heights_flat[valid_indices]
+    predicted_tree_heights_valid = predicted_tree_heights_flat[valid_indices]
 
-# Create the scatter plot
-plt.scatter(
-    observed_tree_heights_valid,
-    predicted_tree_heights_valid,
-    alpha=0.5,
-    color="blue",
-    label="Data",
-)
-plt.plot(
-    observed_tree_heights_valid,
-    observed_tree_heights_valid,
-    color="orange",
-    label="Regression Line",
-)
-plt.xlabel("Observed Tree Heights")
-plt.ylabel("Predicted Tree Heights")
-plt.title(f"Observed vs. Predicted Tree Heights\nR2: {r_squared:.3f}, RMSE: {rmse:.3f}")
-plt.legend()
-plt.show()
+    # Calculate R-squared using vectorized operations
+    observed_mean = np.mean(observed_tree_heights_valid)
+    predicted_mean = np.mean(predicted_tree_heights_valid)
+    numerator = np.sum(
+        (observed_tree_heights_valid - observed_mean)
+        * (predicted_tree_heights_valid - predicted_mean)
+    )
+    denominator_observed = np.sqrt(
+        np.sum((observed_tree_heights_valid - observed_mean) ** 2)
+    )
+    denominator_predicted = np.sqrt(
+        np.sum((predicted_tree_heights_valid - predicted_mean) ** 2)
+    )
+    r_squared = (numerator / (denominator_observed * denominator_predicted)) ** 2
 
-# Scatter plot using hvPlot
-data = pd.DataFrame({
-    "Observed Tree Heights": observed_tree_heights_flat[valid_indices],
-    "Predicted Tree Heights": predicted_tree_heights_flat[valid_indices]
-})
+    # Calculate RMSE using vectorized operations
+    rmse = np.sqrt(
+        np.mean((predicted_tree_heights_valid - observed_tree_heights_valid) ** 2)
+    )
 
-# Create a binned scatter plot with a trendline using hvPlot
-scatter = data.hvplot.scatter(
-    x="Observed Tree Heights",
-    y="Predicted Tree Heights",
-    alpha=0.5,
-    color="blue",
-    width=600,
-    height=400,
-    title=f"Observed vs. Predicted Tree Heights\nR2: {r_squared:.3f}, RMSE: {rmse:.3f}",
-)
-trendline = hv.Curve([(min(data['Observed Tree Heights']), min(data['Observed Tree Heights'])), 
-             (max(data['Observed Tree Heights']), max(data['Observed Tree Heights']))], 
-             label="Regression Line", color="orange")
+    # Create the scatter plot
+    plt.scatter(
+        observed_tree_heights_valid,
+        predicted_tree_heights_valid,
+        alpha=0.5,
+        color="blue",
+        label="Data",
+    )
+    plt.plot(
+        observed_tree_heights_valid,
+        observed_tree_heights_valid,
+        color="orange",
+        label="Regression Line",
+    )
+    plt.xlabel("Observed Tree Heights")
+    plt.ylabel("Predicted Tree Heights")
+    plt.title(f"Observed vs. Predicted Tree Heights\nR2: {r_squared:.3f}, RMSE: {rmse:.3f}")
+    plt.legend()
+    plt.show()
 
-# Combine the scatter plot and trendline
-scatter_with_trend = (scatter * trendline).opts(legend_position='top_left')
+    # Alternative scatter plot using hvPlot
+    data = pd.DataFrame(
+        {
+            "Observed Tree Heights": observed_tree_heights_flat[valid_indices],
+            "Predicted Tree Heights": predicted_tree_heights_flat[valid_indices],
+        }
+    )
 
-# Show the plot
-scatter_with_trend
+    # Create a binned scatter plot with a trendline using hvPlot
+    scatter = data.hvplot.scatter(
+        x="Observed Tree Heights",
+        y="Predicted Tree Heights",
+        alpha=0.5,
+        color="blue",
+        width=600,
+        height=400,
+        title=f"Observed vs. Predicted Tree Heights\nR2: {r_squared:.3f}, RMSE: {rmse:.3f}",
+    )
+    trendline = hv.Curve(
+        [
+            (min(data["Observed Tree Heights"]), min(data["Observed Tree Heights"])),
+            (max(data["Observed Tree Heights"]), max(data["Observed Tree Heights"])),
+        ],
+        label="Regression Line",
+        color="orange",
+    )
+
+    # Combine the scatter plot and trendline
+    scatter_with_trend = (scatter * trendline).opts(legend_position="top_left")
+
+    # Show the plot
+    scatter_with_trend
 
 
-# Heatmap for the first tile and first band
-plt.figure(figsize=(10, 8))
-sns.heatmap(tree_height_map[0, 0], cmap="viridis", annot=True, fmt=".1f")
-plt.xlabel("X")
-plt.ylabel("Y")
-plt.title("Heatmap of Tree Heights for Tile 1, Band 1")
-plt.show()
+    # Heatmap for the first tile and first band
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(tree_height_map[0, 0], cmap="viridis", annot=True, fmt=".1f")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("Heatmap of Tree Heights for Tile 1, Band 1")
+    plt.show()
 
-# Contour Plot
-plt.figure(figsize=(10, 8))
-plt.contour(tree_height_map[0, 0], cmap="viridis")
-plt.colorbar(label="Tree Height (m)")
-plt.xlabel("X")
-plt.ylabel("Y")
-plt.title("Contour Plot of Tree Heights")
-plt.show()
+    # Contour Plot
+    plt.figure(figsize=(10, 8))
+    plt.contour(tree_height_map[0, 0], cmap="viridis")
+    plt.colorbar(label="Tree Height (m)")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("Contour Plot of Tree Heights")
+    plt.show()
 
-# 3D Plot
-from mpl_toolkits.mplot3d import Axes3D
+    # Kernel Density Estimation (KDE) Plot
+    plt.figure(figsize=(10, 6))
+    sns.kdeplot(tree_height_map.flatten(), shade=True)
+    plt.xlabel("Tree Height (m)")
+    plt.ylabel("Density")
+    plt.title("Kernel Density Estimation (KDE) Plot of Tree Heights")
+    plt.show()
 
-x, y = np.meshgrid(np.arange(width), np.arange(height))
-z = tree_height_map[0, 0]
-fig = plt.figure(figsize=(12, 10))
-ax = fig.add_subplot(111, projection="3d")
-ax.plot_surface(x, y, z, cmap="viridis")
-ax.set_xlabel("X")
-ax.set_ylabel("Y")
-ax.set_zlabel("Tree Height (m)")
-ax.set_title("3D Plot of Tree Heights")
-plt.show()
+# -------------------------------------------------------------------------------------------------------------
+#  Step 5: Studying uncertainty at the pixel level
+# -------------------------------------------------------------------------------------------------------------
 
-# Kernel Density Estimation (KDE) Plot
+# List to store prediction arrays
+prediction_arrays = []
+
+# Collect predictions (similar to your existing prediction loop)
+output_folder = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output"
+
+for filename in os.listdir(output_folder):
+    if filename.startswith("predicted_window"):
+        prediction_path = os.path.join(output_folder, filename)
+        with rasterio.open(prediction_path) as pred_src:
+            prediction_arrays.append(pred_src.read(1))
+
+# Number of Monte Carlo simulations
+num_simulations = 1000
+
+# List to store pixel-wise standard deviations from each simulation
+pixelwise_stddev_simulations = []
+
+# Perform Monte Carlo simulations
+for _ in range(num_simulations):
+    # Resample predictions with replacement
+    resampled_predictions = [np.random.choice(pred_array.flatten(), size=pred_array.size, replace=True)
+                             for pred_array in prediction_arrays]
+
+    # Calculate pixel-wise standard deviation for the resampled predictions
+    resampled_stddev = np.std(resampled_predictions, axis=0)
+
+    # Append the resampled standard deviation to the list
+    pixelwise_stddev_simulations.append(resampled_stddev)
+
+# Calculate the mean and confidence intervals (e.g., 95% CI) from the simulations
+mean_stddev = np.mean(pixelwise_stddev_simulations, axis=0)
+lower_percentile = np.percentile(pixelwise_stddev_simulations, 2.5, axis=0)
+upper_percentile = np.percentile(pixelwise_stddev_simulations, 97.5, axis=0)
+
+# Visualize uncertainty (using the mean and confidence intervals)
 plt.figure(figsize=(10, 6))
-sns.kdeplot(tree_height_map_np.flatten(), shade=True)
-plt.xlabel("Tree Height (m)")
-plt.ylabel("Density")
-plt.title("Kernel Density Estimation (KDE) Plot of Tree Heights")
+plt.imshow(mean_stddev, cmap="viridis")
+plt.title("Monte Carlo Simulations of Pixel-wise Standard Deviation")
+plt.colorbar()
 plt.show()
 
+# Visualize the 95% confidence intervals
+plt.figure(figsize=(10, 6))
+plt.imshow(mean_stddev, cmap="viridis")
+plt.fill_between(range(mean_stddev.shape[1]), lower_percentile, upper_percentile, color='red', alpha=0.5)
+plt.title("95% Confidence Intervals of Pixel-wise Standard Deviation")
+plt.colorbar()
+plt.show()
 
-#################################################################################################################################
-# Part 6: Generate wall-to-wall variance map
-#################################################################################################################################
+# -------------------------------------------------------------------------------------------------------------
+#  Step 6: Generate wall-to-wall variance map
+# -------------------------------------------------------------------------------------------------------------
 
-# Calculate the variance of tree heights across the entire dataset
-tree_height_var = np.var(tree_height_map, axis=0)
+# Uncertainty at the pixel level
 
-# Convert the tree height map to a NumPy array with the desired data type
-tree_height_var_map_np = tree_height_var.astype(np.float32)
+# Define the paths to the data folders
+wall_to_wall_map_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Output\wall_to_wall_map_kalimantan.tif"
+
+# Open the wall-to-wall map file with rasterio
+with rasterio.open(wall_to_wall_map_file) as src:
+    # Read the wall-to-wall map data as a numpy array
+    wall_to_wall_map = src.read(1)
+
+    # Calculate the variance of tree heights
+    tree_height_var = np.var(wall_to_wall_map, axis=0)
+
+    # Convert the tree height map to a NumPy array with the desired data type
+    tree_height_var_map_np = tree_height_var.astype(np.float32)
 
 # Save the variance map to a new GeoTIFF file
-output_file = r"C:\Users\mpetel\Documents\Kalimantan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Kalimantan_tree_height_variance.tif"
+output_file = r"C:\Users\mpetel\Documents\Kalimatan Project\Code\Data\Output\First Model - July 23 - U-Net - 5000 epochs\Within 80%\Kalimantan_tree_height_variance.tif"
 height, width = tree_height_var.shape[1:]
-transform = rasterio.transform.from_origin(x_origin, y_origin, resolution, resolution)
 crs = rasterio.crs.CRS.from_epsg(4326)
 
 with rasterio.open(
@@ -926,7 +1244,6 @@ with rasterio.open(
     count=4,
     dtype=tree_height_var_map_np.dtype,
     crs=crs,
-    transform=transform,
 ) as dst:
     dst.write(tree_height_var_map_np, 1)
 
@@ -935,8 +1252,9 @@ value_min = tree_height_var.min()
 value_max = tree_height_var.max()
 print(f"Value range: {value_min} meters to {value_max} meters")
 
-# Visualisations
-# ----------------
+# -------------------------------------------------------------------------------------------------------------
+#  Step 7: Wall-to-wall Variance Map Visualisations
+# -------------------------------------------------------------------------------------------------------------
 
 # Visualize the generated variance map
 plt.imshow(tree_height_var, cmap="coolwarm")
@@ -944,7 +1262,7 @@ plt.colorbar(label="Tree Height Variance")
 plt.title("Tree Height Variance Map")
 plt.show()
 
-# NOT WORKING AT THE MOMENT: Visualize the generated variance map using Datashader
+# Visualize the generated variance map using Datashader
 variance_map_ds = ds.Canvas(
     plot_width=tree_height_var.shape[1], plot_height=tree_height_var.shape[0]
 )
@@ -957,7 +1275,7 @@ tf.Image(agg).show()
 observed_tree_heights = normalized_test_target[
     :, 0, :, :
 ].numpy()  # Assuming the tree height is in the first channel
-predicted_tree_heights = predicted_outputs[:, 0, :, :].numpy()
+predicted_tree_heights = predicted_output[:, 0, :, :].numpy()
 plt.hist(
     observed_tree_heights.flatten(), bins=50, alpha=0.5, color="blue", label="Observed"
 )
@@ -975,8 +1293,6 @@ plt.legend()
 plt.show()
 
 # Scatter plot with observed tree heights on the x-axis and predicted tree heights on the y-axis.
-from scipy.stats import linregrError
-
 observed_tree_heights_flat = observed_tree_heights.flatten()
 predicted_tree_heights_flat = predicted_tree_heights.flatten()
 valid_indices = ~np.isnan(observed_tree_heights_flat) & ~np.isnan(
@@ -1043,3 +1359,4 @@ plt.boxplot(
 plt.ylabel("Tree Heights")
 plt.title("Box Plot of Observed and Predicted Tree Heights")
 plt.show()
+
