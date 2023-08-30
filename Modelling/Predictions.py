@@ -193,32 +193,34 @@ for _ in range(num_patches):
     # Display the original, target, and predicted images along with the difference range for each patch
     fig, axes = plt.subplots(2, 3, figsize=(20, 10))
 
-    # Display the input channels
-    for i in range(min(sample_input_array.shape[2], 3)):
-        axes[0, i].imshow(sample_input_array[:, :, i], cmap="terrain")
-        axes[0, i].set_title(f"Input Channel {i+1}")
-        axes[0, i].axis("off")
+    # Display the RGB composite of the input channels
+    rgb_composite = np.stack((sample_input_valid[0, 0].cpu().numpy(),
+                              sample_input_valid[0, 1].cpu().numpy(),
+                              sample_input_valid[0, 2].cpu().numpy()), axis=-1)
+    axes[0, 0].imshow(rgb_composite)
+    axes[0, 0].set_title("Input RGB Composite")
+    axes[0, 0].axis("off")
 
     # Display the target image
-    axes[0, 3].imshow(sample_target_array, cmap="viridis")
-    axes[0, 3].set_title("Target")
-    axes[0, 3].axis("off")
+    axes[0, 1].imshow(sample_target_array, cmap="viridis")
+    axes[0, 1].set_title("Target")
+    axes[0, 1].axis("off")
 
     # Display the predicted image
-    axes[0, 4].imshow(predicted_output_array, cmap="terrain")
-    axes[0, 4].set_title("Predicted")
-    axes[0, 4].axis("off")
+    axes[0, 2].imshow(predicted_output_array, cmap="terrain")
+    axes[0, 2].set_title("Predicted")
+    axes[0, 2].axis("off")
 
     # Show the difference range
-    axes[0, 5].imshow(diff, cmap="coolwarm")
-    axes[0, 5].set_title("Absolute Difference")
-    axes[0, 5].axis("off")
+    axes[1, 0].imshow(diff[0,0,:,:], cmap="coolwarm")
+    axes[1, 0].set_title("Absolute Difference")
+    axes[1, 0].axis("off")
 
     # Histogram of tree height values for each sample
-    axes[1, 0].hist(sample_target_array[~np.isnan(sample_target_array)], bins=20, color='blue', alpha=0.5, label='Target')
-    axes[1, 0].hist(predicted_output_array[~np.isnan(predicted_output_array)], bins=20, color='red', alpha=0.5, label='Predicted')
-    axes[1, 0].set_title("Tree Height Histogram")
-    axes[1, 0].legend()
+    axes[1, 1].hist(sample_target_array[~np.isnan(sample_target_array)], bins=20, color='blue', alpha=0.5, label='Target')
+    axes[1, 1].hist(predicted_output_array[~np.isnan(predicted_output_array)], bins=20, color='red', alpha=0.5, label='Predicted')
+    axes[1, 1].set_title("Tree Height Histogram")
+    axes[1, 1].legend()
 
     # Show the plot for each patch
     plt.show()
