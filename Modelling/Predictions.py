@@ -579,39 +579,6 @@ def calculate_valid_utm_zone(longitude):
     return zone
 
 
-def generate_data_windows(src, patch_size, overlap):
-    """
-    Generate data windows from the source raster with overlapping tiles.
-
-    Parameters:
-        src (rasterio.io.DatasetReader): The source rasterio DatasetReader object.
-        patch_size (int): Size of the patches to extract from the source raster.
-        overlap (int): The size of overlap between tiles.
-
-    Yields:
-        rasterio.windows.Window: A data window for each tile.
-    """
-    raster_window = windows.Window(
-        col_off=0, row_off=0, width=src.width, height=src.height
-    )
-    offsets = itertools.product(
-        range(0, src.width, patch_size - overlap),
-        range(0, src.height, patch_size - overlap),
-    )
-    for col_off, row_off in offsets:
-        window = windows.Window(
-            col_off=col_off,
-            row_off=row_off,
-            width=patch_size,
-            height=patch_size,
-        )
-        # Ensure the generated window is within the bounds of the raster
-        window = window.intersection(raster_window)
-
-        if window.width > 0 and window.height > 0:
-            yield window
-
-
 def generate_data_windows_from_array(array, patch_size, overlap):
     """
     Generate data windows from a NumPy array with overlapping tiles.
@@ -718,17 +685,6 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
         # plt.title("Reprojected Image")
         # plt.show()
 
-        # Define the processed profile
-        processed_profile = {
-            "driver": "GTiff",
-            "width": new_width,
-            "height": new_height,
-            "count": planet_data.count,
-            "dtype": planet_data.dtypes[0],
-            "crs": target_crs,
-            "transform": new_transform,
-        }
-
         # Now process the normalized TIFF
         for window in generate_data_windows_from_array(
             reprojected_data, patch_size, overlap
@@ -770,10 +726,14 @@ def prediction(input_tiff_path, output_tiff_path, patch_size, overlap):
                 "count": predicted_output.shape[1],
                 #"dtype": planet_data.dtypes[0],
                 "crs": target_crs,
-                "transform": new_transform,
-                # "transform": from_origin(
-                #     new_transform.c, new_transform.f, new_transform.a, new_transform.e
-                # ),
+                "transform": (
+                    new_transform[0] + window.col_off * new_transform[1],
+                    new_transform[1],
+                    new_transform[2],
+                    new_transform[3] + window.row_off * new_transform[5],
+                    new_transform[4],
+                    new_transform[5],
+                ),
             }
 
             # Save the predicted output as individual TIFF files
